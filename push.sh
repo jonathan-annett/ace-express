@@ -1,5 +1,9 @@
 #!/bin/bash
 git add *
-git commit -m "auto updated"
+if [[ "$1" == "" ]];then
+ git commit -m "auto updated"
+else
+ git commit
+fi
 git push
 git rev-parse HEAD
