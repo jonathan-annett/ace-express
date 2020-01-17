@@ -1,5 +1,8 @@
 
                    var
+                   fs=require("fs"),
+                   path=require("path"),
+                   express=require("express"),
                    ace_js,
                    ace_min_js,
                    ace_file     = require.resolve("ace-builds"),
@@ -13,7 +16,7 @@
                            get : function () {
                                ace_min_js = fs.readFileSync(ace_min_file,"utf8");
                                delete ace.min_src;
-                               Object.defineProperties(res,{
+                               Object.defineProperties(ace,{
                                    min_src : {
                                        value : ace_min_js
                                    }
@@ -25,8 +28,8 @@
                        src : {
                            get : function () {
                                ace_js = fs.readFileSync(ace_file,"utf8");
-                               delete res.src;
-                               Object.defineProperties(res,{
+                               delete ace.src;
+                               Object.defineProperties(ace,{
                                    src : {
                                        value : ace_js
                                    }
