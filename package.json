@@ -12,7 +12,9 @@
     "ace-builds": "^1.4.8"
   },
   "devDependencies": {},
-  "scripts": {},
+  "scripts": {
+      "test" : "node -e 'require (\"ace-express\").demo(\"dawn\")'"
+  },
   "keywords": [],
   "main": "index.js",
   "name": "ace-express",
