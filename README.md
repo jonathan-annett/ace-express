@@ -25,7 +25,7 @@ optionally, set theme and port
 
     node -e 'require("ace-express").demo("chaos",9000)'
 
-For those curious, here is the entire source of this module, so yes you can ust copy/paste/hack (ie not bother installing this wrapper at all), if that's your preference.
+For those curious, here is the entire source of this module, so yes you can just copy/paste/hack (ie not bother installing this wrapper at all), if that's your preference.
 
 **index.js**
 
