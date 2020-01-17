@@ -1,0 +1,23 @@
+{
+  "author": {
+    "name": "Jonathan Annett",
+    "url": "http://github.com/jonathan-annett",
+    "email": "jonathan.max.annett@gmail.com"
+  },
+  "contributors": [],
+  "description": "serve ace editor files from node-express",
+  "license": "MIT",
+  "dependencies": {
+    "ace-builds": "^1.4.8"
+  },
+  "devDependencies": {},
+  "scripts": {},
+  "keywords": [],
+  "main": "index.js",
+  "name": "ace-express",
+  "repository": {
+    "url": "https://github.com/jonathan-annett/ace-express",
+    "type": "git"
+  },
+  "version": "0.0.1"
+}
