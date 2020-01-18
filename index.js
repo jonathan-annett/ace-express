@@ -4,7 +4,6 @@ var
 fs             = require("fs"),
 path           = require("path"),
 express        = require("express"),
-os             = require("os"),
 ace_file       = require.resolve("ace-builds"),
 ace_dir        = path.dirname(ace_file),
 ace_min_dir    = path.join(ace_dir,     "../src-min-noconflict"),
@@ -14,9 +13,23 @@ edit_html_file = path.join(ace_dir, "../editor.html"),
 edit_html = fs.readFileSync(edit_html_file,"utf8").split("src-noconflict/ace.js").join("ace-min/ace.js"),
 demo_html = edit_html,
 //chromebooks do something funky with localhost under penguin/crostini, so help a coder out....
-hostname = (os.hostname()==="penguin" && os.platform()==="linux") ? "penguin.termina.linux.test" : "localhost",
-
+hostname = isChromebook() ? "penguin.termina.linux.test" : "localhost",
 ace = {};
+
+function isChromebook() {
+    var os = require("os");
+    if (os.hostname()==="penguin" && os.platform()==="linux") {
+        var run=require("child_process").execSync;
+        try {
+            var cmd = run ("which systemd-detect-virt").toString().trim();
+            return (run(cmd).toString().trim()==="lxc");
+        } catch (e) {
+            
+        }
+    }
+    return false;
+}
+
 
 Object.defineProperties(ace,{
    express : {
