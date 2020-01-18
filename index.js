@@ -9,7 +9,7 @@ ace_dir        = path.dirname(ace_file),
 ace_min_dir    = path.join(ace_dir,     "../src-min-noconflict"),
 ace_min_file   = path.join(ace_min_dir, path.basename(ace_file)),
 edit_html_file = path.join(ace_dir, "../editor.html"),
-
+ace_demos_dir  = path.join(ace_dir, "../demo"),
 edit_html = fs.readFileSync(edit_html_file,"utf8").split("src-noconflict/ace.js").join("ace-min/ace.js"),
 demo_html = edit_html,
 //chromebooks do something funky with localhost under penguin/crostini, so help a coder out....
@@ -24,7 +24,7 @@ function isChromebook() {
             var cmd = run ("which systemd-detect-virt").toString().trim();
             return (run(cmd).toString().trim()==="lxc");
         } catch (e) {
-            
+
         }
     }
     return false;
@@ -36,9 +36,11 @@ Object.defineProperties(ace,{
        value : function (app) {
            app.use("/ace",express.static(ace_dir));
            app.use("/ace-min",express.static(ace_min_dir));
+           app.use("/ace-demos",express.static(ace_demos_dir));
            app.get("/ace-demo",function(req,res) {
                 res.send(demo_html);
            });
+
        },
        configurable:true,enumerable:true
    },
