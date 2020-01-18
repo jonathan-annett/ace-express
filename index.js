@@ -5,13 +5,16 @@ fs             = require("fs"),
 path           = require("path"),
 express        = require("express"),
 ace_file       = require.resolve("ace-builds"),
-ace_dir        = path.dirname(ace_file),
-ace_min_dir    = path.join(ace_dir,     "../src-min-noconflict"),
-ace_min_file   = path.join(ace_min_dir, path.basename(ace_file)),
-edit_html_file = path.join(ace_dir, "../editor.html"),
-ace_demos_dir  = path.join(ace_dir, "../demo"),
-edit_html = fs.readFileSync(edit_html_file,"utf8").split("src-noconflict/ace.js").join("ace-min/ace.js"),
-demo_html = edit_html,
+ace_dir        = path.join(path.dirname(ace_file),".."),
+edit_html_file = path.join(ace_dir, "editor.html"),
+edit_html      = fs.readFileSync(edit_html_file,"utf8"),
+demo_html      = edit_html,
+demos           = fs.readdirSync(path.join(ace_dir, "demo")).filter(function(x){return x.endsWith(".html");}),
+demos_index = "<html><head></head><body>\n"+
+    '<a href="../editor.html">editor.html</a><br>'+
+    demos.map(function(fn){
+    return '<a href="'+encodeURI(fn)+'">'+fn+'</a>';
+}).join("<br>\n")+"\n</body></html>",
 //chromebooks do something funky with localhost under penguin/crostini, so help a coder out....
 hostname = isChromebook() ? "penguin.termina.linux.test" : "localhost",
 ace = {};
@@ -35,10 +38,12 @@ Object.defineProperties(ace,{
    express : {
        value : function (app) {
            app.use("/ace",express.static(ace_dir));
-           app.use("/ace-min",express.static(ace_min_dir));
-           app.use("/ace-demos",express.static(ace_demos_dir));
-           app.get("/ace-demo",function(req,res) {
+
+           app.get("/ace/editor.html",function(req,res) {
                 res.send(demo_html);
+           });
+           app.get("/ace/demo/",function(req,res) {
+                res.send(demos_index);
            });
 
        },
@@ -51,7 +56,7 @@ Object.defineProperties(ace,{
         ace.express(app);
         // listen for requests :)
         var listener = app.listen(port||3000, function() {
-          console.log('goto http://'+hostname+':' + listener.address().port+"/ace-demo");
+          console.log('goto http://'+hostname+':' + listener.address().port+"/ace/editor.html");
         });
 
     },
