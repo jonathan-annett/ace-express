@@ -1,26 +1,29 @@
 {
-  "author": {
-    "name": "Jonathan Annett",
-    "url": "http://github.com/jonathan-annett",
-    "email": "jonathan.max.annett@gmail.com"
-  },
-  "contributors": [],
-  "description": "serve ace editor files from node-express",
-  "license": "MIT",
-  "dependencies": {
-    "express": "^4.17.1",
-    "ace-builds": "^1.4.8"
-  },
-  "devDependencies": {},
-  "scripts": {
-      "test" : "node -e 'require (\"ace-express\").demo(\"dawn\")'"
-  },
-  "keywords": [],
-  "main": "index.js",
-  "name": "ace-express",
-  "repository": {
-    "url": "https://github.com/jonathan-annett/ace-express",
-    "type": "git"
-  },
-  "version": "0.0.1"
+    "author": {
+        "name": "Jonathan Annett",
+        "url": "http://github.com/jonathan-annett",
+        "email": "jonathan.max.annett@gmail.com"
+    },
+    "contributors": [],
+    "description": "serve ace editor files from node-express",
+    "license": "MIT",
+    "dependencies": {
+        "ace-builds": "^1.4.8",
+        "body-parser": "^1.19.0",
+        "express": "^4.17.1",
+        "express-ws": "^4.0.0",
+        "string-diff-regex": "github:jonathan-annett/string-diff-regex#568fc6e45a7d2a18c7a70666353fd7f90a33058d"
+    },
+    "devDependencies": {},
+    "scripts": {
+        "test": "node -e 'require (\"ace-express\").demo(\"dawn\")'"
+    },
+    "keywords": [],
+    "main": "index.js",
+    "name": "ace-express",
+    "repository": {
+        "url": "https://github.com/jonathan-annett/ace-express",
+        "type": "git"
+    },
+    "version": "0.0.1"
 }
