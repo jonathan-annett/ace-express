@@ -26,5 +26,10 @@ if [[ "${UPDATED}" == "1" ]] && [[ "$1" == "push" ]]; then
    git add package.json
    git commit -m "updated dependancies"
    git push
+   exit 0
+else
+   if [[ "${UPDATED}" == "0" ]] && [[ "$1" == "push" ]]; then
+      exit 1
+  fi
 fi
 
