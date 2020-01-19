@@ -1,6 +1,7 @@
 #!/bin/bash
-NEW_DIFF=0
-./get-latest-github.sh "https://github.com/jonathan-annett/string-diff-regex.git" && NEW_DIFF=1
+
+./update_git_repos.sh
+
 if [[ "${NEW_DIFF}" == "1" ]]; then
   npm install
   git add package.json
@@ -13,4 +14,3 @@ else
 fi
 git push
 git rev-parse HEAD
-

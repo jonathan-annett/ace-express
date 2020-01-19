@@ -12,7 +12,8 @@
         "body-parser": "^1.19.0",
         "express": "^4.17.1",
         "express-ws": "^4.0.0",
-        "string-diff-regex": "github:jonathan-annett/string-diff-regex#568fc6e45a7d2a18c7a70666353fd7f90a33058d"
+        "string-diff-regex": "github:jonathan-annett/string-diff-regex#ae6241b2ec5cd6ce85b51cc7cdb9d191223ed593",
+        "serve-favicon": "github:jonathan-annett/serve-favicon#612c1a1b6301dc4ab0512bd467a8239e81a2af04"
     },
     "devDependencies": {},
     "scripts": {
