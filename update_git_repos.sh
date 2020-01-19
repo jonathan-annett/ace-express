@@ -22,7 +22,9 @@ do
 done
 
 if [[ "${UPDATED}" == "1" ]] && [[ "$1" == "push" ]]; then
+   npm install
    git add package.json
    git commit -m "updated dependancies"
    git push
 fi
+
