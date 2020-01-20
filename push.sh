@@ -1,8 +1,8 @@
 #!/bin/bash
+NEW_REPOS=0
+./update_git_repos.sh && NEW_REPOS=1
 
-./update_git_repos.sh
-
-if [[ "${NEW_DIFF}" == "1" ]]; then
+if [[ "${NEW_REPOS}" == "1" ]]; then
   npm install
   git add package.json
 fi

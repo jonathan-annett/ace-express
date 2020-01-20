@@ -38,13 +38,18 @@ function isChromebook() {
     return false;
 }
 
-
-function singleFileEditorBrowserCode(editor){
+//nb this func is never invoked, it's just used to
+//hold the source that is injected into the html
+// the "arguments" here are just for linting purposes
+// they exist as vars in the outer scope which this code is
+// injected into.
+function singleFileEditorBrowserCode(editor,file){
 
     var
 
     timeout=false,
     blockChanges=false,
+    updating=false,
     getUpdateWS = function () {
         var
         wsBusy=false,
@@ -59,6 +64,7 @@ function singleFileEditorBrowserCode(editor){
            var payload = JSON.parse(evt.data);
            if (payload.ok) {
                wsBusy = false;
+               updating = false;
                document.title = file;
            } else {
                if (payload.updated) {
@@ -91,12 +97,14 @@ function singleFileEditorBrowserCode(editor){
             }
             wsBusy=true;
             document.title = file + "+";
+            updating = true;
             ws.send(JSON.stringify({file:file,value:editor.getValue()}));
         };
 
         return updateWS ;
 
     },
+
     getUpdateWSPump = function () {
         var
 
@@ -125,8 +133,7 @@ function singleFileEditorBrowserCode(editor){
             fileText.addEventListener(
                 "change",
                 function(text,mode){
-                    console.log({change_mode:mode});
-                    if (!blockChanges) {
+                    if (!blockChanges && mode !=="set") {
                         blockChanges=true;
 
                         var pos = editor.session.selection.toJSON()
@@ -145,11 +152,13 @@ function singleFileEditorBrowserCode(editor){
            if (!!payload.diff) {
                 console.log({diff_in:payload.diff});
                 fileText.update(payload.diff,diffPumpUpdate);
-                document.title = file;
+
            } else {
                if (payload.diffAck===lastDiffHash) {
                     wsBusy=false;
                     lastDiffHash=null;
+                    document.title = file;
+                    updating = false;
                }
            }
 
@@ -167,23 +176,23 @@ function singleFileEditorBrowserCode(editor){
             }
             wsBusy=true;
             document.title = file + "+";
+            updating=true;
             fileText.value=editor.getValue();
         };
 
         return updateWSPump ;
     },
 
-    xhr=null,
-
-
-    updateXHR =function(){
+    getUpdateXHR = function () {
+        var xhr=null,
+        updateXHR =function(){
             timeout=false;
             if (xhr) {
                 timeout = setTimeout(updateXHR,50);
                 return;
             }
             document.title = file + "+";
-
+            updating = true;
             xhr = new XMLHttpRequest();   // new HttpRequest instance
             xhr.open("POST", "/edited");
             xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
@@ -192,6 +201,7 @@ function singleFileEditorBrowserCode(editor){
                 if (xhr.readyState == 4 && xhr.status == "200") {
                     if (ok) {
                         xhr=null;
+                        updating=false;
                         document.title = file;
                     } else {
                         return document.location.reload();
@@ -200,18 +210,37 @@ function singleFileEditorBrowserCode(editor){
             }
             xhr.onerror = function () {
                 xhr=null;
+                updating=false;
             }
             xhr.send(JSON.stringify({file:file,value:editor.getValue()}));
-        },
+        };
+        return updateXHR;
+    },
 
-    updateProc = ("WebSocket" in window) ? getUpdateWSPump() : updateXHR;
+    updateProc = ("WebSocket" in window) ? getUpdateWSPump() : getUpdateXHR(),
 
-
+    updateProcErrorCheckWrap = function (msec) {
+        if (timeout) clearTimeout(timeout);
+        if (document.querySelectorAll("#editor div .ace_error").length > 0) {
+            document.title = file + "? (errors)";
+            timeout=setTimeout(updateProcErrorCheckWrap,msec,Math.max(msec*2,5000));
+        } else {
+            var hints = document.querySelectorAll("#editor div .ace_info").length;
+            if ( hints> 0) {
+                document.title = file + (updating ? "+" : "*")+ " "+hints+" warnings/hints";
+            } else {
+                document.title = file + (updating ? "+" : "*");
+            }
+            timeout=setTimeout(updateProc,5);
+        }
+    };
     editor.getSession().on('change', function() {
+
+
         if (blockChanges) return;
         if (timeout) clearTimeout(timeout);
-        document.title = file + (!!xhr ? "+" : "*");
-        timeout=setTimeout(updateProc,250);
+        document.title = file + (updating ? "?" : "*");
+        timeout=setTimeout(updateProcErrorCheckWrap,1000,250);
     });
 }
 
@@ -352,8 +381,30 @@ function singleFileEditor(theme,file,port,append_html) {
 
           ws.on('close', function() {
              var ix= connects.indexOf(ws);
-             if (ix>=0) connects.splice(ix,1);
-            // console.log({closed:connects.map(function(ws){return "ws";})});
+             if (ix>=0) {
+                 connects.splice(ix,1);
+                console.log({closed:connects.map(function(ws){return "ws";})});
+            }
+
+            if (ws.updateDiff) {
+                fileText.removeEventListener("diff",ws.updateDiff);
+                console.log({detached:"ws.updateDiff event for closed socket"})
+            }
+
+          });
+
+          ws.on('error', function() {
+             var ix= connects.indexOf(ws);
+             if (ix>=0) {
+                  connects.splice(ix,1);
+                 console.log({closed:connects.map(function(ws){return "ws";})});
+             }
+
+            if (ws.updateDiff) {
+                fileText.removeEventListener("diff",ws.updateDiff);
+                console.log({detached:"ws.updateDiff event for error'd socket"})
+            }
+
           });
 
 
@@ -401,7 +452,6 @@ function singleFileEditor(theme,file,port,append_html) {
     });
 
 }
-
 
 
 Object.defineProperties(ace,{
