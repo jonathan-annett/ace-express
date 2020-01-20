@@ -288,7 +288,7 @@ function htmlGenerator(template) {
 
 }
 
-function getEditorMasterHTML (files,title) {
+function getEditorMasterHTML (files,title,theme) {
     
     var htmlTemplate = '<head><title></title></head><body><div></div></body>';
     
@@ -557,7 +557,7 @@ function singleFileEditor(theme,file,port,append_html) {
         console.log('goto http://'+hostname+':' + listener.address().port+"/ace/edit/"+file);
     });
 
-    app.get("/ace/edit/"+file,getEditorMasterHTML ([file],file));
+    app.get("/ace/edit/"+file,getEditorMasterHTML ([file],file,theme));
 
     return fileEditor(theme,file,app,append_html);
 }
@@ -629,7 +629,7 @@ function multiFileEditor(theme,files,port,append_html) {
         });
     });
 
-    app.get("/ace/edit",getEditorMasterHTML (files, "editing files") );
+    app.get("/ace/edit",getEditorMasterHTML (files, "editing files",theme) );
 
 
     return Object.defineProperties( self,
