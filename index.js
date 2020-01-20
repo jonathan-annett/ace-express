@@ -327,7 +327,7 @@ function getEditorMasterHTML (files,title) {
                 return '<td>'+file+'</td>'+
                        '<td>'+e.message+'</td>'+
                        '<td>&nbsp;</td>'+
-                       '<td><button disabled data-file="'+file+'">edit</button></td>'
+                       '<td><button disabled data-file="'+file+'">edit</button></td>';
             }
 
         }).join('</tr><tr>\n')+'</tr></table>';
@@ -347,8 +347,11 @@ function fileEditor(theme,file,app,append_html) {
 
     var
     onchange,
+    onclose,
+    onopen,
     connects=[],
     fileText = stringDiff.diffPump(fs.readFileSync(file,"utf8"),undefined,true),
+    updaters=[],
     ok='{"ok":true}',
     notOk='{"ok":false}';
 
@@ -376,12 +379,11 @@ function fileEditor(theme,file,app,append_html) {
 
                 }
 
-                if (onchange) onchange(text,file);
+                if (typeof onchange==='function') onchange(text,file);
             });
 
         });
     });
-
 
     function fileWasEdited(payload,sender){
         if (payload.file===file && typeof payload.value==='string') {
@@ -409,7 +411,7 @@ function fileEditor(theme,file,app,append_html) {
             html.replace(/ace\/theme\/twilight/,'ace/theme/'+theme);
         }
 
-        html.replace('src-noconflict/ace.js','/ace/src-min-noconflict/ace.js')
+        html.replace('src-noconflict/ace.js','/ace/src-min-noconflict/ace.js');
 
         html.replace(new RegExp("(?<=<pre id=.*>).*(?=<\/pre>)","gs"),'');
 
@@ -449,8 +451,6 @@ function fileEditor(theme,file,app,append_html) {
 
     }
 
-
-
     app.get("/ace/editing/"+file,getEditorHtml);
 
     app.post("/edited/"+file,editedCallback);
@@ -475,6 +475,8 @@ function fileEditor(theme,file,app,append_html) {
             if (ws.updateDiff) {
                 fileText.removeEventListener("diff",ws.updateDiff);
                 console.log({detached:"ws.updateDiff event for closed socket"});
+                updaters = fileText.connections(updaters,'updateDiff');
+                if (typeof onclose==='function') onclose(file,updaters);
             }
 
           });
@@ -495,7 +497,11 @@ function fileEditor(theme,file,app,append_html) {
 
 
           fileText.addEventListener("diff",ws.updateDiff);
-          console.log("newPumpSender");
+          updaters.push(ws);
+          updaters = fileText.connections(updaters,'updateDiff');
+
+          if (typeof onopen==='function') onopen(file,ws,updaters);
+
 
 
           //connects.push(ws);
@@ -504,6 +510,7 @@ function fileEditor(theme,file,app,append_html) {
     });
 
     return Object.defineProperties({},{
+        file : file,
         on : {
             value  : function (e,fn) {
                 if (typeof fn ==='function') {
@@ -556,6 +563,42 @@ function singleFileEditor(theme,file,port,append_html) {
 }
 
 function multiFileEditor(theme,files,port,append_html) {
+    var
+    self = {} ,
+    events={ change : [], close : [], open: [] },
+    emit=function(e,args){
+        var fns = events[e];
+        if (typeof fns==='object') {
+            fns.forEach(function(fn){
+                if (typeof fn==='function') fn.apply(this,args);
+            });
+        }
+    },
+    addEventListener = function(e,fn) {
+        if (typeof fn==='function') {
+            var fns = events[e];
+            if (typeof fns==='object') {
+                fns.push(fn);
+            }
+        }
+    },
+    removeEventListener = function(e,fn) {
+
+        var fns = events[e];
+        if (typeof fns==='object') {
+
+            if (typeof fn==='function') {
+                var ix = fns.indexOf(fn);
+                if (ix>=0) fns.splice(ix,1);
+            } else {
+                if (fn===null) {
+                    fns.splice(0,fns.length);
+                }
+            }
+
+        }
+    };
+
     var app = express();
     var expressWs = require('express-ws')(app);
 
@@ -570,19 +613,33 @@ function multiFileEditor(theme,files,port,append_html) {
     });
 
     var editors = {};
-    var launchers = [];
     files.forEach(function(file){
-        editors[file] = fileEditor(theme,file,app,append_html);
+        editor = fileEditor(theme,file,app,append_html);
+        editors[file] = editor;
+        editor.on("change",function(){
+            emit("change",[{file:editor.file,text:editor.text}]);
+        });
+        editor.on("open",function(){
+            emit("open",[{file:editor.file,text:editor.text}]);
+        });
+        editor.on("close",function(){
+            emit("close",[{file:editor.file}]);
+        });
     });
 
     app.get("/ace/edit",getEditorMasterHTML (files, "editing files") );
 
-    return editors;
+
+    return Object.propertiesDefine( self,
+        {
+            files : { value : editors, enumerable:true},
+            addEventListener : { value : addEventListener , enumerable:true} ,
+            removeEventListener : { value : removeEventListener, enumerable:true},
+        }
+    );
 }
 
-
 function nodeCLI(argv) {
-
 
     function getFilename() {
         var ix = argv.indexOf("--edit");
@@ -614,7 +671,6 @@ function nodeCLI(argv) {
         return [];
     }
 
-
     function getTheme() {
         var ix = argv.indexOf("--theme");
         if (ix>=2 && ix < argv.length-1 ) {
@@ -630,7 +686,6 @@ function nodeCLI(argv) {
         }
         return 0;// use random port
     }
-
 
     var filename = getFilename();
     var files = getFilenames();
@@ -648,8 +703,6 @@ function nodeCLI(argv) {
     }
 
 }
-
-
 
 Object.defineProperties(ace,{
    express : {
@@ -701,8 +754,6 @@ Object.defineProperties(ace,{
 });
 
 module.exports = ace;
-
-
 
 if (process.mainModule===module && process.argv.length>2) {
     nodeCLI(process.argv);
