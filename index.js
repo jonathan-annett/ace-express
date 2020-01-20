@@ -71,7 +71,7 @@ function singleFileEditorBrowserCode(editor,file){
 
                    blockChanges=true;
 
-                   var pos = editor.session.selection.toJSON()
+                   var pos = editor.session.selection.toJSON();
                    editor.session.setValue(payload.updated);
                    editor.session.selection.fromJSON(pos);
 
@@ -136,7 +136,7 @@ function singleFileEditorBrowserCode(editor,file){
                     if (!blockChanges && mode !=="set") {
                         blockChanges=true;
 
-                        var pos = editor.session.selection.toJSON()
+                        var pos = editor.session.selection.toJSON();
                         editor.session.setValue(text);
                         editor.session.selection.fromJSON(pos);
 
@@ -207,11 +207,11 @@ function singleFileEditorBrowserCode(editor,file){
                         return document.location.reload();
                     }
                 }
-            }
+            };
             xhr.onerror = function () {
                 xhr=null;
                 updating=false;
-            }
+            };
             xhr.send(JSON.stringify({file:file,value:editor.getValue()}));
         };
         return updateXHR;
@@ -359,7 +359,7 @@ function singleFileEditor(theme,file,port,append_html) {
             } else {
                 res.send ("can't edit file "+file+". sorry."+(err?"\n"+err.message:""));
             }
-        })
+        });
 
     }
 
@@ -388,7 +388,7 @@ function singleFileEditor(theme,file,port,append_html) {
 
             if (ws.updateDiff) {
                 fileText.removeEventListener("diff",ws.updateDiff);
-                console.log({detached:"ws.updateDiff event for closed socket"})
+                console.log({detached:"ws.updateDiff event for closed socket"});
             }
 
           });
@@ -402,7 +402,7 @@ function singleFileEditor(theme,file,port,append_html) {
 
             if (ws.updateDiff) {
                 fileText.removeEventListener("diff",ws.updateDiff);
-                console.log({detached:"ws.updateDiff event for error'd socket"})
+                console.log({detached:"ws.updateDiff event for error'd socket"});
             }
 
           });
