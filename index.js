@@ -116,7 +116,6 @@ function singleFileEditorBrowserCode(editor,file){
         var
         lastDiffHash,
         diffPumpUpdate = function(d){
-            console.log({diff_out:d});
             lastDiffHash=d?d[2]:null;
             if (lastDiffHash) {
                 ws.send(JSON.stringify({file:file,diff:d}));
@@ -150,7 +149,6 @@ function singleFileEditorBrowserCode(editor,file){
            var payload = JSON.parse(evt.data);
 
            if (!!payload.diff) {
-                console.log({diff_in:payload.diff});
                 fileText.update(payload.diff,diffPumpUpdate);
 
            } else {
@@ -297,7 +295,6 @@ function singleFileEditor(theme,file,port,append_html) {
 
             if (payload.file===file && typeof payload.diff==='object') {
                 fileText.update(payload.diff,sender.updateDiff);
-                console.log({diff_in:payload.diff});
                 sender.send('{"diffAck":"'+payload.diff[2]+'"}');
             } else {
                 sender.send(notOk);
@@ -309,19 +306,17 @@ function singleFileEditor(theme,file,port,append_html) {
         return fileWasEdited(req.body,res);
     }
 
-    function getEditorHtml(req,res) {
-
-        var
-        html=theme? edit_html.replace(/ace\/theme\/twilight/,'ace/theme/'+theme) : edit_html;
-        html = html.replace(
-            new RegExp("(?<=<pre id=.*>).*(?=<\/pre>)","gs"),
-        '');
-
+    function htmlGenerator(template) {
+        var html = ""+template;
         var append=function(h,where){
             where = "</"+(where || "body")+">";
             if (typeof h==='function') {
                 h = h.toString();
-                h = "<script>"+h.substring(h.search(/{/)+1,h.length-1)+"</script>";
+                if (h.endsWith('*/}')&& h.indexOf('{/*')===h.indexOf('{')) {
+                    h = h.substring(h.search(/{/)+3,h.length-3);
+                } else {
+                    h = "<script>"+h.substring(h.search(/{/)+1,h.length-1)+"</script>";
+                }
             } else {
                 if (h.startsWith("/") && (h.indexOf(" ")<0)&&h.endsWith(".js")) {
                     h = '<script src="'+h+'"></script>';
@@ -329,28 +324,62 @@ function singleFileEditor(theme,file,port,append_html) {
             }
             html = html.replace(where,h+"\n"+where);
         };
+        var self = {};
+        return Object.defineProperties(self,{
+            html: {
+                get : function (){ return html;},
+                enumerable:true,configurable:true
+            },
+            append: {
+                value : function (h,where) {
+                    append(h,where);
+                    return self;
+                },
+                enumerable:true,configurable:true
+            },
+            replace : {
+                value : function (a,b) {
+                    html = html.replace(a,b);
+                    return self;
+                },
+                enumerable:true,configurable:true
+            }
+
+        });
+
+    }
+
+    function getEditorHtml(req,res) {
+
+        var html = htmlGenerator(edit_html);
+
+        if (theme) {
+            html.replace(/ace\/theme\/twilight/,'ace/theme/'+theme);
+        }
+
+        html.replace(new RegExp("(?<=<pre id=.*>).*(?=<\/pre>)","gs"),'');
 
         fs.stat(file,function(err,stat){
             if (!err && stat) {
                 fs.readFile(file,"utf8",function(err,text){
                     if (!err && typeof text==='string') {
                         fileText.value = text;
-                        append(
+                        html.append(
                             '<script>var file='+JSON.stringify(file)+',str = '+
                                 JSON.stringify(fileText.value)
                                     .replace(/</g,"\\u003c")
                                         .replace(/>/g,"\\u003e")+
                                         ';\neditor.setValue(str,-1);document.title=file;</script>');
 
-                        append(singleFileEditorBrowserCode);
+                        html.append(singleFileEditorBrowserCode);
 
                         if (append_html) {
-                           append(append_html);
+                           html.append(append_html);
                         }
 
-                        append ("/string-diff-regex.js","head");
+                        html.append ("/string-diff-regex.js","head");
 
-                        res.send(html);
+                        res.send(html.html);
                     } else {
                         res.send ("can't edit file "+file+". sorry."+(err?"\n"+err.message:""));
                     }
@@ -363,7 +392,37 @@ function singleFileEditor(theme,file,port,append_html) {
 
     }
 
-    app.get("/ace/edit",getEditorHtml);
+    function getEditorMasterHTML () {
+        function htmlTemplate() {/*
+            <head>
+                <title></title>
+            </head>
+            <body>
+               <button id="editBtn"></button>
+            </body>
+        */}
+        function loader() {
+            document.getElementById("editBtn").addEventListener(
+                "click",
+                function(e) {
+                    window.open("/ace/editing","_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
+                }
+            );
+        }
+
+        var html =  htmlGenerator("<html></html>")
+                .append(htmlTemplate,"html")
+                .append(file,"title")
+                .append("edit "+file,"button")
+                .append(loader,"body").html;
+
+        return function getEditLaunchHtml(req,res) {
+            res.send(html);
+        };
+    }
+
+    app.get("/ace/editing",getEditorHtml);
+    app.get("/ace/edit",getEditorMasterHTML (filename) );
     app.post("/edited",editedCallback);
     app.use("/ace",express.static(ace_dir));
     app.use("/string-diff-regex.js",express.static(stringDiffSrc));
@@ -371,7 +430,6 @@ function singleFileEditor(theme,file,port,append_html) {
     app.ws('/', function(ws) {
 
           ws.updateDiff = function (diff,who) {
-              console.log({diff_out:diff});
               ws.send(JSON.stringify({file:file,diff:diff}));
           };
 
