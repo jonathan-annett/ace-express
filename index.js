@@ -13,6 +13,7 @@ demo_html      = edit_html,
 demos          = fs.readdirSync(path.join(ace_dir, "demo")).filter(function(x){return x.endsWith(".html");}),
 stringDiff     = require ("string-diff-regex"),
 stringDiffSrc  = require.resolve("string-diff-regex"),
+ws_prefix      = "/ws/",
 
 demos_index    = "<html><head></head><body>\n"+
                  '<a href="../editor.html">editor.html</a><br>'+
@@ -43,7 +44,7 @@ function isChromebook() {
 // the "arguments" here are just for linting purposes
 // they exist as vars in the outer scope which this code is
 // injected into.
-function singleFileEditorBrowserCode(editor,file){
+function singleFileEditorBrowserCode(editor,file,ws_prefix){
 
     var
 
@@ -53,7 +54,7 @@ function singleFileEditorBrowserCode(editor,file){
     getUpdateWS = function () {
         var
         wsBusy=false,
-        ws = new WebSocket("ws://" + location.host + "/");
+        ws = new WebSocket("ws://" + location.host + ws_prefix+file);
         ws.onopen = function() {
 
            // Web Socket is connected, send data using send()
@@ -111,7 +112,7 @@ function singleFileEditorBrowserCode(editor,file){
         fileText,
 
         wsBusy=false,
-        ws = new WebSocket("ws://" + location.host + "/");
+        ws = new WebSocket("ws://" + location.host + ws_prefix+file);
 
         var
         lastDiffHash,
@@ -232,6 +233,12 @@ function singleFileEditorBrowserCode(editor,file){
             timeout=setTimeout(updateProc,5);
         }
     };
+
+    editor.setOptions({
+      fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
+      fontSize: "16pt"
+    });
+
     editor.getSession().on('change', function() {
 
 
@@ -242,15 +249,108 @@ function singleFileEditorBrowserCode(editor,file){
     });
 }
 
-function singleFileEditor(theme,file,port,append_html) {
+function htmlGenerator(template) {
+    var html = ""+template;
+    var append=function(h,where){
+        where = "</"+(where || "body")+">";
+        if (typeof h==='function') {
+            h = h.toString();
+            if (h.endsWith('*/}')&& h.indexOf('{/*')===h.indexOf('{')) {
+                h = h.substring(h.search(/{/)+3,h.length-3);
+            } else {
+                h = "<script>"+h.substring(h.search(/{/)+1,h.length-1)+"</script>";
+            }
+        } else {
+            if (h.startsWith("/") && (h.indexOf(" ")<0)&&h.endsWith(".js")) {
+                h = '<script src="'+h+'"></script>';
+            }
+        }
+        html = html.replace(where,h+"\n"+where);
+    };
+    var self = {};
+    return Object.defineProperties(self,{
+        html: {
+            get : function (){ return html;},
+            enumerable:true,configurable:true
+        },
+        append: {
+            value : function (h,where) {
+                append(h,where);
+                return self;
+            },
+            enumerable:true,configurable:true
+        },
+        replace : {
+            value : function (a,b) {
+                html = html.replace(a,b);
+                return self;
+            },
+            enumerable:true,configurable:true
+        }
+
+    });
+
+}
+
+function getEditorMasterHTML (files,title) {
+    function htmlTemplate() {/*
+        <head>
+            <title></title>
+        </head>
+        <body>
+           <div></div>
+        </body>
+    */}
+    function loader(file) {
+
+        function editFile (file) {
+            file = typeof file==='object' && file.target ? file.target.dataset.file: file;
+            window.open("/ace/editing/"+file,"_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
+        }
+        document.querySelectorAll("[data-file]").forEach(
+            function(btn) {
+                btn.addEventListener("click",editFile);
+            }
+        );
+
+    }
+    function buttonHtml (files) {
+        return '<table><tr>'+
+        files.map(function(file){
+            try {
+                var stats = fs.statSync(path.resolve(file));
+                return '<td>'+file+'</td>'+
+                       '<td>'+stats.mtime.toUTCString()+'</td>'+
+                       '<td>'+stats.size.toString()+'</td>'+
+                       '<td><button data-file="'+file+'">edit</button></td>';
+            } catch (e) {
+                return '<td>'+file+'</td>'+
+                       '<td>'+e.message+'</td>'+
+                       '<td>&nbsp;</td>'+
+                       '<td><button disabled data-file="'+file+'">edit</button></td>'
+            }
+
+        }).join('</tr><tr>\n')+'</tr></table>';
+    }
+
+    return function getEditLaunchHtml(req,res) {
+        var html =  htmlGenerator("<html></html>")
+        .append(htmlTemplate,"html")
+        .append(title,"title")
+        .append(buttonHtml (files) ,'div')
+        .append(loader,"body").html;
+        res.send(html);
+    };
+}
+
+function fileEditor(theme,file,app,append_html) {
 
     var
     onchange,
     connects=[],
     fileText = stringDiff.diffPump(fs.readFileSync(file,"utf8"),undefined,true),
     ok='{"ok":true}',
-    notOk='{"ok":false}',
-    app = express();
+    notOk='{"ok":false}';
 
     fileText.addEventListener("change",function(text){
 
@@ -283,11 +383,6 @@ function singleFileEditor(theme,file,port,append_html) {
     });
 
 
-    var expressWs = require('express-ws')(app);
-
-    app.use(favicon());
-    app.use(require('body-parser').json());
-
     function fileWasEdited(payload,sender){
         if (payload.file===file && typeof payload.value==='string') {
             fileText.value = payload.value;
@@ -306,49 +401,6 @@ function singleFileEditor(theme,file,port,append_html) {
         return fileWasEdited(req.body,res);
     }
 
-    function htmlGenerator(template) {
-        var html = ""+template;
-        var append=function(h,where){
-            where = "</"+(where || "body")+">";
-            if (typeof h==='function') {
-                h = h.toString();
-                if (h.endsWith('*/}')&& h.indexOf('{/*')===h.indexOf('{')) {
-                    h = h.substring(h.search(/{/)+3,h.length-3);
-                } else {
-                    h = "<script>"+h.substring(h.search(/{/)+1,h.length-1)+"</script>";
-                }
-            } else {
-                if (h.startsWith("/") && (h.indexOf(" ")<0)&&h.endsWith(".js")) {
-                    h = '<script src="'+h+'"></script>';
-                }
-            }
-            html = html.replace(where,h+"\n"+where);
-        };
-        var self = {};
-        return Object.defineProperties(self,{
-            html: {
-                get : function (){ return html;},
-                enumerable:true,configurable:true
-            },
-            append: {
-                value : function (h,where) {
-                    append(h,where);
-                    return self;
-                },
-                enumerable:true,configurable:true
-            },
-            replace : {
-                value : function (a,b) {
-                    html = html.replace(a,b);
-                    return self;
-                },
-                enumerable:true,configurable:true
-            }
-
-        });
-
-    }
-
     function getEditorHtml(req,res) {
 
         var html = htmlGenerator(edit_html);
@@ -356,6 +408,8 @@ function singleFileEditor(theme,file,port,append_html) {
         if (theme) {
             html.replace(/ace\/theme\/twilight/,'ace/theme/'+theme);
         }
+
+        html.replace('src-noconflict/ace.js','/ace/src-min-noconflict/ace.js')
 
         html.replace(new RegExp("(?<=<pre id=.*>).*(?=<\/pre>)","gs"),'');
 
@@ -365,11 +419,14 @@ function singleFileEditor(theme,file,port,append_html) {
                     if (!err && typeof text==='string') {
                         fileText.value = text;
                         html.append(
-                            '<script>var file='+JSON.stringify(file)+',str = '+
-                                JSON.stringify(fileText.value)
-                                    .replace(/</g,"\\u003c")
-                                        .replace(/>/g,"\\u003e")+
-                                        ';\neditor.setValue(str,-1);document.title=file;</script>');
+                            '<script>\n'+
+                            'var file='+JSON.stringify(file)+','+
+                                'ws_prefix = '+JSON.stringify(ws_prefix)+','+
+                                'str = '+
+                                    JSON.stringify(fileText.value)
+                                        .replace(/</g,"\\u003c")
+                                            .replace(/>/g,"\\u003e")+ ';\n'+
+                                'editor.setValue(str,-1);document.title=file;\n</script>');
 
                         html.append(singleFileEditorBrowserCode);
 
@@ -392,42 +449,13 @@ function singleFileEditor(theme,file,port,append_html) {
 
     }
 
-    function getEditorMasterHTML () {
-        function htmlTemplate() {/*
-            <head>
-                <title></title>
-            </head>
-            <body>
-               <button id="editBtn"></button>
-            </body>
-        */}
-        function loader() {
-            document.getElementById("editBtn").addEventListener(
-                "click",
-                function(e) {
-                    window.open("/ace/editing","_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
-                }
-            );
-        }
 
-        var html =  htmlGenerator("<html></html>")
-                .append(htmlTemplate,"html")
-                .append(file,"title")
-                .append("edit "+file,"button")
-                .append(loader,"body").html;
 
-        return function getEditLaunchHtml(req,res) {
-            res.send(html);
-        };
-    }
+    app.get("/ace/editing/"+file,getEditorHtml);
 
-    app.get("/ace/editing",getEditorHtml);
-    app.get("/ace/edit",getEditorMasterHTML (filename) );
-    app.post("/edited",editedCallback);
-    app.use("/ace",express.static(ace_dir));
-    app.use("/string-diff-regex.js",express.static(stringDiffSrc));
+    app.post("/edited/"+file,editedCallback);
 
-    app.ws('/', function(ws) {
+    app.ws(ws_prefix+file, function(ws) {
 
           ws.updateDiff = function (diff,who) {
               ws.send(JSON.stringify({file:file,diff:diff}));
@@ -475,10 +503,6 @@ function singleFileEditor(theme,file,port,append_html) {
 
     });
 
-    var listener = app.listen(port||0, function() {
-        console.log('goto http://'+hostname+':' + listener.address().port+"/ace/edit");
-    });
-
     return Object.defineProperties({},{
         on : {
             value  : function (e,fn) {
@@ -510,6 +534,52 @@ function singleFileEditor(theme,file,port,append_html) {
     });
 
 }
+
+function singleFileEditor(theme,file,port,append_html) {
+
+    var app = express();
+    var expressWs = require('express-ws')(app);
+
+    app.use(favicon());
+    app.use(require('body-parser').json());
+
+    app.use("/ace",express.static(ace_dir));
+    app.use("/string-diff-regex.js",express.static(stringDiffSrc));
+
+    var listener = app.listen(port||0, function() {
+        console.log('goto http://'+hostname+':' + listener.address().port+"/ace/edit/"+file);
+    });
+
+    app.get("/ace/edit/"+file,getEditorMasterHTML ([file],file));
+
+    return fileEditor(theme,file,app,append_html);
+}
+
+function multiFileEditor(theme,files,port,append_html) {
+    var app = express();
+    var expressWs = require('express-ws')(app);
+
+    app.use(favicon());
+    app.use(require('body-parser').json());
+
+    app.use("/ace",express.static(ace_dir));
+    app.use("/string-diff-regex.js",express.static(stringDiffSrc));
+
+    var listener = app.listen(port||0, function() {
+        console.log('goto http://'+hostname+':' + listener.address().port+"/ace/edit");
+    });
+
+    var editors = {};
+    var launchers = [];
+    files.forEach(function(file){
+        editors[file] = fileEditor(theme,file,app,append_html);
+    });
+
+    app.get("/ace/edit",getEditorMasterHTML (files, "editing files") );
+
+    return editors;
+}
+
 
 
 Object.defineProperties(ace,{
@@ -563,6 +633,27 @@ function getFilename() {
     }
 }
 
+function getFilenames() {
+    var ix = process.argv.indexOf("--files");
+    if (ix>=2 && ix < process.argv.length-1 ) {
+        var files = [];
+        ix ++;
+        var filename = process.argv[ix];
+
+        while (filename) {
+            if (fs.existsSync(filename)) files.push(filename);
+            ix ++;
+            if (ix >= process.argv.length-1 ) return files;
+            filename = process.argv[ix];
+            if (filename.startsWith('--')) return files;
+        }
+
+        return files;
+    }
+    return [];
+}
+
+
 function getTheme() {
     var ix = process.argv.indexOf("--theme");
     if (ix>=2 && ix < process.argv.length-1 ) {
@@ -581,9 +672,18 @@ function getPort() {
 
 if (process.mainModule===module && process.argv.length>2) {
     var filename = getFilename();
-    if (filename ) {
-        console.log("edting:",filename);
+    var files = getFilenames();
+    if (filename && files.length===0) {
         singleFileEditor(getTheme(),filename,getPort() );
+    } else {
+
+        if (filename && files.indexOf(filename)<0) {
+            files[ process.argv.indexOf("--edit") < process.argv.indexOf("--files")  ? 'unshift' : 'push'](filename);
+        }
+
+        if (files.length>0) {
+            multiFileEditor(getTheme(),files,getPort() );
+        }
     }
 
 }
