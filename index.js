@@ -115,9 +115,9 @@ function singleFileEditorBrowserCode(editor,file){
 
         var
         lastDiffHash,
-        diffPumpUpdate = function(d){
+        diffPumpUpdate = function(d,who,init){
             lastDiffHash=d?d[2]:null;
-            if (lastDiffHash) {
+            if (lastDiffHash && !init) {
                 ws.send(JSON.stringify({file:file,diff:d}));
             }
         };
