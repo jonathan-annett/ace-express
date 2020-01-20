@@ -307,11 +307,12 @@ function getEditorMasterHTML (files,title) {
 
     }
     function buttonHtml (files) {
-        var editor_theme = typeof file ==='string' ? theme : file.theme;
-        var filename = typeof file ==='string' ? file : file.file;
       
         return '<table><tr>'+
         files.map(function(file){
+            var editor_theme = typeof file ==='string' ? theme : file.theme;
+            var filename = typeof file ==='string' ? file : file.file;
+    
             try {
                 var stats = fs.statSync(path.resolve(filename));
                 return '<td>'+filename+'</td>'+
