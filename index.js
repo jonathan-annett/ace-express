@@ -516,6 +516,8 @@ function fileEditor(theme,file,app,append_html) {
                 if (typeof fn ==='function') {
                     switch (e) {
                         case "change": onchange = fn; break;
+                        case "open": onopen = fn; break;
+                        case "close": onclose = fn; break;
                     }
                 }
             },
