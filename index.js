@@ -510,7 +510,7 @@ function fileEditor(theme,file,app,append_html) {
     });
 
     return Object.defineProperties({},{
-        file : file,
+        file : {value : file,enumerable : true,configurable: true },
         on : {
             value  : function (e,fn) {
                 if (typeof fn ==='function') {
@@ -614,7 +614,7 @@ function multiFileEditor(theme,files,port,append_html) {
 
     var editors = {};
     files.forEach(function(file){
-        editor = fileEditor(theme,file,app,append_html);
+        var editor = fileEditor(theme,file,app,append_html);
         editors[file] = editor;
         editor.on("change",function(){
             emit("change",[{file:editor.file,text:editor.text}]);
@@ -630,7 +630,7 @@ function multiFileEditor(theme,files,port,append_html) {
     app.get("/ace/edit",getEditorMasterHTML (files, "editing files") );
 
 
-    return Object.propertiesDefine( self,
+    return Object.defineProperties( self,
         {
             files : { value : editors, enumerable:true},
             addEventListener : { value : addEventListener , enumerable:true} ,
