@@ -2,10 +2,16 @@
 
 literally just a wrapper around **ace-builds** and **express**
 
+installation
+------------
+
+`npm install --save github:jonathan-annett/ace-express`
+
+
 why?
 ---
 
-whilst doing an `npm install ace-builds` gets the files onto your machine, you still need to serve them to the browser somehow.
+whilst doing an `npm install ace-builds` gets the ace editor files onto your machine, you still need to serve them to the browser somehow.
 
 If your method of choice is **express**, you then need to find the files deep within your **node_modules** folder, figure out which ones to serve and set up routes to that folder.
 
@@ -26,3 +32,8 @@ optionally, set theme and port
     node -e 'require("ace-express").demo("chaos",9000)'
 
 
+single file editor mode
+
+    node -e 'require("ace-express").edit("chaos","./somefile.js",9000)'
+or (if you have previously done `npm install --save github:jonathan-annett/ace-express`
+    node node_modules/ace-express --edit ./somefile.js --theme chaos --port 9000

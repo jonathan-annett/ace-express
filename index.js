@@ -571,7 +571,6 @@ function getTheme() {
     return "dawn";
 }
 
-
 function getPort() {
     var ix = process.argv.indexOf("--port");
     if (ix>=2 && ix < process.argv.length-1 ) {
