@@ -255,11 +255,7 @@ function htmlGenerator(template) {
         where = "</"+(where || "body")+">";
         if (typeof h==='function') {
             h = h.toString();
-            if (h.endsWith('*/}')&& h.indexOf('{/*')===h.indexOf('{')) {
-                h = h.substring(h.search(/{/)+3,h.length-3);
-            } else {
-                h = "<script>"+h.substring(h.search(/{/)+1,h.length-1)+"</script>";
-            }
+            h = "<script>"+h.substring(h.search(/{/)+1,h.length-1)+"</script>";
         } else {
             if (h.startsWith("/") && (h.indexOf(" ")<0)&&h.endsWith(".js")) {
                 h = '<script src="'+h+'"></script>';
@@ -293,15 +289,11 @@ function htmlGenerator(template) {
 }
 
 function getEditorMasterHTML (files,title) {
-    function htmlTemplate() {/*
-        <head>
-            <title></title>
-        </head>
-        <body>
-           <div></div>
-        </body>
-    */}
-    function loader(file) {
+    
+    var htmlTemplate = '<head><title></title></head><body><div></div></body>';
+    
+    function loader() {
+        
 
         function editFile (file) {
             file = typeof file==='object' && file.target ? file.target.dataset.file: file;
@@ -315,19 +307,24 @@ function getEditorMasterHTML (files,title) {
 
     }
     function buttonHtml (files) {
+        var editor_theme = typeof file ==='string' ? theme : file.theme;
+        var filename = typeof file ==='string' ? file : file.file;
+      
         return '<table><tr>'+
         files.map(function(file){
             try {
-                var stats = fs.statSync(path.resolve(file));
-                return '<td>'+file+'</td>'+
+                var stats = fs.statSync(path.resolve(filename));
+                return '<td>'+filename+'</td>'+
                        '<td>'+stats.mtime.toUTCString()+'</td>'+
                        '<td>'+stats.size.toString()+'</td>'+
-                       '<td><button data-file="'+file+'">edit</button></td>';
+                       '<td>'+editor_theme+'</td>'+
+                       '<td><button data-file="'+filename+'">edit</button></td>';
             } catch (e) {
-                return '<td>'+file+'</td>'+
+                return '<td>'+filename+'</td>'+
                        '<td>'+e.message+'</td>'+
                        '<td>&nbsp;</td>'+
-                       '<td><button disabled data-file="'+file+'">edit</button></td>';
+                       '<td>'+editor_theme+'</td>'+
+                       '<td><button disabled data-file="'+filename+'">edit</button></td>';
             }
 
         }).join('</tr><tr>\n')+'</tr></table>';
@@ -616,8 +613,10 @@ function multiFileEditor(theme,files,port,append_html) {
 
     var editors = {};
     files.forEach(function(file){
-        var editor = fileEditor(theme,file,app,append_html);
-        editors[file] = editor;
+        var editor_theme = typeof file ==='string' ? theme : file.theme;
+        var filename = typeof file ==='string' ? file : file.file;
+        var editor = fileEditor(editor_theme,filename,app,append_html);
+        editors[filename] = editor;
         editor.on("change",function(){
             emit("change",[{file:editor.file,text:editor.text}]);
         });
