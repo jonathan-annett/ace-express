@@ -581,6 +581,75 @@ function multiFileEditor(theme,files,port,append_html) {
 }
 
 
+function nodeCLI(argv) {
+
+
+    function getFilename() {
+        var ix = argv.indexOf("--edit");
+        if (ix>=2 && ix < argv.length-1 ) {
+            var filename = argv[ix+1];
+            if (fs.existsSync(filename)) {
+                return filename;
+            }
+        }
+    }
+
+    function getFilenames() {
+        var ix = argv.indexOf("--files");
+        if (ix>=2 && ix < argv.length-1 ) {
+            var files = [];
+            ix ++;
+            var filename = argv[ix];
+
+            while (filename) {
+                if (fs.existsSync(filename)) files.push(filename);
+                ix ++;
+                if (ix >= argv.length-1 ) return files;
+                filename = argv[ix];
+                if (filename.startsWith('--')) return files;
+            }
+
+            return files;
+        }
+        return [];
+    }
+
+
+    function getTheme() {
+        var ix = argv.indexOf("--theme");
+        if (ix>=2 && ix < argv.length-1 ) {
+            return argv[ix+1];
+        }
+        return "dawn";
+    }
+
+    function getPort() {
+        var ix = argv.indexOf("--port");
+        if (ix>=2 && ix < argv.length-1 ) {
+            return argv[ix+1];
+        }
+        return 0;// use random port
+    }
+
+
+    var filename = getFilename();
+    var files = getFilenames();
+    if (filename && files.length===0) {
+        singleFileEditor(getTheme(),filename,getPort() );
+    } else {
+
+        if (filename && files.indexOf(filename)<0) {
+            files[ process.argv.indexOf("--edit") < process.argv.indexOf("--files")  ? 'unshift' : 'push'](filename);
+        }
+
+        if (files.length>0) {
+            multiFileEditor(getTheme(),files,getPort() );
+        }
+    }
+
+}
+
+
 
 Object.defineProperties(ace,{
    express : {
@@ -618,72 +687,23 @@ Object.defineProperties(ace,{
 
    },
 
+   editMulti : {
+    value : multiFileEditor,
+    configurable:true,enumerable:true
+
+   },
+   cli  : {
+       value : nodeCLI,
+        configurable:true,enumerable:true
+
+  }
+
 });
 
 module.exports = ace;
 
 
-function getFilename() {
-    var ix = process.argv.indexOf("--edit");
-    if (ix>=2 && ix < process.argv.length-1 ) {
-        var filename = process.argv[ix+1];
-        if (fs.existsSync(filename)) {
-            return filename;
-        }
-    }
-}
-
-function getFilenames() {
-    var ix = process.argv.indexOf("--files");
-    if (ix>=2 && ix < process.argv.length-1 ) {
-        var files = [];
-        ix ++;
-        var filename = process.argv[ix];
-
-        while (filename) {
-            if (fs.existsSync(filename)) files.push(filename);
-            ix ++;
-            if (ix >= process.argv.length-1 ) return files;
-            filename = process.argv[ix];
-            if (filename.startsWith('--')) return files;
-        }
-
-        return files;
-    }
-    return [];
-}
-
-
-function getTheme() {
-    var ix = process.argv.indexOf("--theme");
-    if (ix>=2 && ix < process.argv.length-1 ) {
-        return process.argv[ix+1];
-    }
-    return "dawn";
-}
-
-function getPort() {
-    var ix = process.argv.indexOf("--port");
-    if (ix>=2 && ix < process.argv.length-1 ) {
-        return process.argv[ix+1];
-    }
-    return 0;// use random port
-}
 
 if (process.mainModule===module && process.argv.length>2) {
-    var filename = getFilename();
-    var files = getFilenames();
-    if (filename && files.length===0) {
-        singleFileEditor(getTheme(),filename,getPort() );
-    } else {
-
-        if (filename && files.indexOf(filename)<0) {
-            files[ process.argv.indexOf("--edit") < process.argv.indexOf("--files")  ? 'unshift' : 'push'](filename);
-        }
-
-        if (files.length>0) {
-            multiFileEditor(getTheme(),files,getPort() );
-        }
-    }
-
+    nodeCLI(process.argv);
 }
