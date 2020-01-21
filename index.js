@@ -441,6 +441,13 @@ function fileEditor(theme,file,app,append_html) {
                 fs.readFile(file,"utf8",function(err,text){
                     if (!err && typeof text==='string') {
                         fileText.value = text;
+                        
+                        html.append({
+                            ws_prefix : ws_prefix,
+                            file      : file,
+                            file_text : fileText.value
+                        },"head");
+                        
                         html.append(
                             '<script>\n'+
                             'var file='+JSON.stringify(file)+','+
