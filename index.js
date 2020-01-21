@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 
 var
 
@@ -8,8 +9,9 @@ favicon        = require('serve-favicon'),
 jsextensions   = require('jsextensions'),
 ace_file       = require.resolve("ace-builds"),
 ace_editor_dir = path.join(__dirname,"ace-public"),
-ace_editor_html_path = path.join(__dirname,"ace-public","editor.html"),
-ace_editor_css_path  = path.join(__dirname,"ace-public","editor.css"),
+ace_editor_html_path    = path.join(__dirname,"ace-public","editor.html"),
+ace_editor_css_path     = path.join(__dirname,"ace-public","editor.css"),
+ace_directory_html_path = path.join(__dirname,"ace-public","editor_dir.html"),
 //ace_editor_js_path   = path.join(__dirname,"ace-public","editor.js"),
 
 
@@ -24,6 +26,12 @@ ace_single_file_edit_url = "/ace/editing/",
 
 ace_multi_file_dashboard_url = "/ace/edit",
 
+ace_directory_row_re = new regExp('<tr class="template_row.*<\/tr>','s),
+ace_directory_html_raw= String.load(ace_directory_html_path),
+ace_directory_html= ace_directory_html_raw.replace(ace_directory_row_re,''),
+ace_directory_html_template = 
+    ace_directory_row_re.exec(ace_directory_html_raw)[0]
+       .replace(/<tr class="template_row.*>/,'<tr>'),
 
 ace_dir        = path.join(path.dirname(ace_file),".."),
 edit_html      = fs.readFileSync(ace_editor_html_path,"utf8"),
@@ -312,7 +320,8 @@ function getEditorMasterHTML (files,title,theme) {
         };
     }
     
-    function buttonHtml (files) {
+     
+   function buttonHtml (files) {
         var fileIndex = {};
         files.forEach(function(file){
             var filename = typeof file ==='string' ? file : file.file;
@@ -338,6 +347,15 @@ function getEditorMasterHTML (files,title,theme) {
            files : Object.keys(fileIndex),
            index : fileIndex
         });
+        
+        
+        return ace_directory_html_template
+                .htmlGenerator()
+                .replace ()
+        
+        
+        = ace_directory_html_raw.replace(ace_directory_row_re,''),
+               ace_directory_html_template = 
         
         return '<table><tr>'+
         '<th>filename</th>'+
@@ -694,9 +712,9 @@ function nodeCLI(argv) {
     }
 
     function getFilenames() {
+        var files = [];
         var ix = argv.indexOf("--files");
         if (ix>=2 && ix < argv.length-1 ) {
-            var files = [];
             ix ++;
             var filename = argv[ix];
 
@@ -708,9 +726,27 @@ function nodeCLI(argv) {
                 if (filename.startsWith('--')) return files;
             }
 
-            return files;
         }
-        return [];
+        
+        ix = argv.indexOf("--dirs");
+        if (ix>=2 && ix < argv.length-1 ) {
+            ix ++;
+            var 
+            dirname = argv[ix],
+            file_path_mapper = function(fn){return path.join(dirname,fn);};
+
+            while (dirname) {
+                if (fs.existsSync(dirname)&& fs.statSync(dirname).isDirectory() ) {
+                        files=files.concat(fs.readdirSync(dirname).map(file_path_mapper))
+                    }
+                ix ++;
+                if (ix >= argv.length-1 ) return files;
+                dirname = argv[ix];
+                if (dirname.startsWith('--')) return files;
+            }
+
+        }
+        return files;
     }
 
     function getTheme() {
