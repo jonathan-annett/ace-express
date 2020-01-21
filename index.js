@@ -286,6 +286,12 @@ function getEditorMasterHTML (files,title,theme) {
             }
         );
         
+        
+
+    }
+    
+    function temp() {
+        
         var
         ws = new WebSocket("ws://" + location.host + ws_prefix+"/_index");
         ws.onopen = function() {
@@ -304,8 +310,8 @@ function getEditorMasterHTML (files,title,theme) {
         ws.onclose = function() {
            document.location.reload();
         };
-
     }
+    
     function buttonHtml (files) {
         var fileIndex = {};
         files.forEach(function(file){
@@ -358,6 +364,10 @@ function getEditorMasterHTML (files,title,theme) {
         var html =  String.htmlGenerator()
             .append(ace_editor_css_url)
             .append(title,"title")
+            .append({
+                ws_prefix : ws_prefix,
+                ace_single_file_edit_url : ace_single_file_edit_url
+            },"head")
             .append(buttonHtml (files))
             .append(loader,"body").html;
         res.send(html);
@@ -449,14 +459,11 @@ function fileEditor(theme,file,app,append_html) {
                         },"head");
                         
                         html.append(
-                            '<script>\n'+
-                            'var file='+JSON.stringify(file)+','+
-                                'ws_prefix = '+JSON.stringify(ws_prefix)+','+
-                                'str = '+
-                                    JSON.stringify(fileText.value)
-                                        .replace(/</g,"\\u003c")
-                                            .replace(/>/g,"\\u003e")+ ';\n'+
-                                'editor.setValue(str,-1);document.title=file;\n</script>');
+                            function (editor,file,file_text) {
+                                editor.setValue(file_text,-1);document.title=file;
+                                file_text=null;
+                            }
+                        );
 
                         html.append(singleFileEditorBrowserCode);
 
