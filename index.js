@@ -5,6 +5,7 @@ fs             = require("fs"),
 path           = require("path"),
 express        = require("express"),
 favicon        = require('serve-favicon'),
+jsextensions   = require('jsextensions'),
 ace_file       = require.resolve("ace-builds"),
 ace_editor_dir = path.join(__dirname,"ace-public"),
 ace_editor_html_path = path.join(__dirname,"ace-public","editor.html"),
@@ -20,7 +21,6 @@ ace_editor_js_url   = "/ace/edit_/editor.js",
 
 ace_single_file_open_url = "/ace/edit",
 ace_single_file_edit_url = "/ace/editing/",
-
 
 ace_multi_file_dashboard_url = "/ace/edit",
 
@@ -272,8 +272,6 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
 
 function getEditorMasterHTML (files,title,theme) {
     
-    var htmlTemplate = '<head><title></title></head><body><div></div></body>';
-      
     function loader() {
         
 
@@ -358,7 +356,6 @@ function getEditorMasterHTML (files,title,theme) {
 
     return function getEditLaunchHtml(req,res) {
         var html =  String.htmlGenerator()
-            .append(htmlTemplate,"html")
             .append(ace_editor_css_url)
             .append(title,"title")
             .append(buttonHtml (files) ,'div')
