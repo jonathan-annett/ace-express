@@ -26,7 +26,7 @@ ace_single_file_edit_url = "/ace/editing/",
 
 ace_multi_file_dashboard_url = "/ace/edit",
 
-ace_directory_row_re = new regExp('<tr class="template_row.*<\/tr>','s),
+ace_directory_row_re = new RegExp('<tr class="template_row.*<\/tr>','s'),
 ace_directory_html_raw= String.load(ace_directory_html_path),
 ace_directory_html= ace_directory_html_raw.replace(ace_directory_row_re,''),
 ace_directory_html_template = 
@@ -321,74 +321,53 @@ function getEditorMasterHTML (files,title,theme) {
     }
     
      
-   function buttonHtml (files) {
+   function getFiles () {
         var fileIndex = {};
         files.forEach(function(file){
             var filename = typeof file ==='string' ? file : file.file;
+            var editor_theme = typeof file ==='string' ? theme : file.theme;
             var stats = fs.statSync(path.resolve(filename));
             
             try {    
                 fileIndex[filename]= {
                     file  : filename,
-                    size  : stats.size,
-                    mtime : stats.mtime.getTime(),
-                    mtime_str : stats.mtime.toUTCString()
+                    stats : stats,
+                    editor_theme: editor_theme
                 };
             } catch (e) {
                 fileIndex[filename]= {
                     file  : filename,
-                    size  : 0,
-                    mtime : 0,
-                    mtime_str : ""
+                    stats  : {
+                        size  : 0,
+                        mtime : new Date(0)
+                    },
+                    theme : theme
                 };
             }
         });
-        var filesJSON = JSON.stringify({
-           files : Object.keys(fileIndex),
-           index : fileIndex
-        });
         
-        
-        return ace_directory_html_template
-                .htmlGenerator()
-                .replace ()
-        
-        
-        = ace_directory_html_raw.replace(ace_directory_row_re,''),
-               ace_directory_html_template = 
-        
-        return '<table><tr>'+
-        '<th>filename</th>'+
-        '<th>date/time</th>'+
-        '<th>size</th>'+
-        '<th>editor theme</th>'+
-        '<th>windows open</th>'+
-        '<th>&nbsp;</th></tr>\n<tr>'+
-        files.map(function(file){
-            var editor_theme = typeof file ==='string' ? theme : file.theme;
-            var filename = typeof file ==='string' ? file : file.file;
-    
-                return '<td>'+filename+'</td>'+
-                       '<td>'+fileIndex[filename].mtime_str+'</td>'+
-                       '<td>'+fileIndex[filename].size.toString()+'</td>'+
-                       '<td>'+editor_theme+'</td>'+
-                       '<td>0</td>'+
-                       '<td><button data-file="'+filename+'">edit</button></td>';
-
-        }).join('</tr><tr>\n')+'</tr></table>';
+        return fileIndex;
     }
 
     return function getEditLaunchHtml(req,res) {
-        var html =  String.htmlGenerator()
-            .append(ace_editor_css_url)
-            .append(title,"title")
-            .append({
-                ws_prefix : ws_prefix,
-                ace_single_file_edit_url : ace_single_file_edit_url
-            },"head")
-            .append(buttonHtml (files))
-            .append(loader,"body").html;
-        res.send(html);
+        
+        var html =  ace_directory_html.htmlGenerator();
+            
+        html.append(ace_editor_css_url);
+        html.append(title,"title");
+        var filesNow = getFiles ();
+        html.append({
+            ws_prefix : ws_prefix,
+            ace_single_file_edit_url : ace_single_file_edit_url,
+            files : filesNow
+        },"head");
+        
+        html.append(
+          ace_directory_html_template.renderWithObject(Object.values(filesNow)),
+          "table");
+            
+        html.append(loader,"body");
+        res.send(html.html);
     };
 }
 
