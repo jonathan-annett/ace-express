@@ -358,7 +358,7 @@ function getEditorMasterHTML (files,title,theme) {
         var html =  String.htmlGenerator()
             .append(ace_editor_css_url)
             .append(title,"title")
-            .append(buttonHtml (files) ,'div')
+            .append(buttonHtml (files))
             .append(loader,"body").html;
         res.send(html);
     };
