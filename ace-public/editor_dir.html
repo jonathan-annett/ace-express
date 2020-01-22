@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+    <head>
+        <title></title>
+    </head>
+    <body>
+        <table>
+            <tr>
+                <th>filename</th>
+                <th>date/time</th>
+                <th>size</th>
+                <th>theme</th>
+                <th>windows open</th>
+                <th>&nbsp;</th>
+            </tr>
+            <tr class="template_row">
+                <td><a data-file="${file}" href="#">${file}</a></td>
+                <td>${stats.mtime.toUTCString}</td>
+                <td>${stats.size}</td>
+                <td>${theme}</td>
+                <td>${info.windowCount}</td>
+                <td>
+                    <button data-file="${file}">edit</button>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

@@ -1,6 +1,12 @@
 # ace-express
 
-literally just a wrapper around **ace-builds** and **express**
+orignally just a wrapper around **ace-builds** and **express**, ace-express does two things.
+
+1) lets you serve the [ace-builds](https://www.npmjs.com/package/ace-builds) files easily via express
+
+2) offers a way of editing server based files directly from a browser (locking down exactly what files can be edited) over a WebSocket connection.
+
+
 
 installation
 ------------
