@@ -33,13 +33,13 @@ ace_directory_html_template =
     ace_directory_row_re.exec(ace_directory_html_raw)[0]
        .replace(/<tr class="template_row.*>/,'<tr>'),
 
-ace_dir        = path.join(path.dirname(ace_file),".."),
-edit_html      = fs.readFileSync(ace_editor_html_path,"utf8"),
-demo_html      = edit_html,
-demos          = fs.readdirSync(path.join(ace_dir, "demo")).filter(function(x){return x.endsWith(".html");}),
-stringDiff     = require ("string-diff-regex"),
+ace_dir         = path.join(path.dirname(ace_file),".."),
+edit_html       = fs.readFileSync(ace_editor_html_path,"utf8"),
+demo_html       = edit_html,
+demos           = fs.readdirSync(path.join(ace_dir, "demo")).filter(function(x){return x.endsWith(".html");}),
+stringDiffRegex = require ("string-diff-regex"),
 string_diff_src_path = require.resolve("string-diff-regex"),
-string_diff_src_url  = "/lib/string-diff-regex.js",
+//string_diff_src_url  = "/lib/string-diff-regex.js",
 
 ws_prefix      = "/ws/",
 remote_ip      = require('@zhike/remote-ip-express-middleware'),
@@ -75,206 +75,208 @@ function isChromebook() {
 // injected into.
 function singleFileEditorBrowserCode(editor,file,ws_prefix){
 
-    var
-
-    timeout=false,
-    blockChanges=false,
-    updating=false,
-    getUpdateWS = function () {
+    Function.load("string-diff-regex",function(stringDiffRegex){
         var
-        wsBusy=false,
-        ws = new WebSocket("ws://" + location.host + ws_prefix+file);
-        ws.onopen = function() {
-
-           // Web Socket is connected, send data using send()
-          // ws.send('{"open":true}');
-        };
-
-        ws.onmessage = function (evt) {
-           var payload = JSON.parse(evt.data);
-           if (payload.ok) {
-               wsBusy = false;
-               updating = false;
-               document.title = file;
-           } else {
-               if (payload.updated) {
-
-                   blockChanges=true;
-
-                   var pos = editor.session.selection.toJSON();
-                   editor.session.setValue(payload.updated);
-                   editor.session.selection.fromJSON(pos);
-
-                   blockChanges=false;
-
-
-
+    
+        timeout=false,
+        blockChanges=false,
+        updating=false,
+        getUpdateWS = function () {
+            var
+            wsBusy=false,
+            ws = new WebSocket("ws://" + location.host + ws_prefix+file);
+            ws.onopen = function() {
+    
+               // Web Socket is connected, send data using send()
+              // ws.send('{"open":true}');
+            };
+    
+            ws.onmessage = function (evt) {
+               var payload = JSON.parse(evt.data);
+               if (payload.ok) {
+                   wsBusy = false;
+                   updating = false;
+                   document.title = file;
                } else {
-                   return document.location.reload();
+                   if (payload.updated) {
+    
+                       blockChanges=true;
+    
+                       var pos = editor.session.selection.toJSON();
+                       editor.session.setValue(payload.updated);
+                       editor.session.selection.fromJSON(pos);
+    
+                       blockChanges=false;
+    
+    
+    
+                   } else {
+                       return document.location.reload();
+                   }
                }
-           }
-        };
-
-        ws.onclose = function() {
-           document.location.reload();
-        };
-
-        var updateWS = function (){
-            timeout=false;
-            if (wsBusy) {
-                timeout = setTimeout(updateWS,50);
-                return;
-            }
-            wsBusy=true;
-            document.title = file + "+";
-            updating = true;
-            ws.send(JSON.stringify({file:file,value:editor.getValue()}));
-        };
-
-        return updateWS ;
-
-    },
-
-    getUpdateWSPump = function () {
-        var
-
-        fileText,
-
-        wsBusy=false,
-        ws = new WebSocket("ws://" + location.host + ws_prefix+file);
-
-        var
-        lastDiffHash,
-        diffPumpUpdate = function(d,who,init){
-            lastDiffHash=d?d[2]:null;
-            if (lastDiffHash && !init) {
-                ws.send(JSON.stringify({file:file,diff:d}));
-            }
-        };
-
-        ws.onopen = function() {
-
-            fileText = window.stringDiff.diffPump(
-                editor.getValue(),
-                diffPumpUpdate,
-                true);
-
-            fileText.addEventListener(
-                "change",
-                function(text,mode){
-                    if (!blockChanges && mode !=="set") {
-                        blockChanges=true;
-
-                        var pos = editor.session.selection.toJSON();
-                        editor.session.setValue(text);
-                        editor.session.selection.fromJSON(pos);
-
-                        blockChanges=false;
-                    }
-                });
-
-        };
-
-        ws.onmessage = function (evt) {
-           var payload = JSON.parse(evt.data);
-
-           if (!!payload.diff) {
-                fileText.update(payload.diff,diffPumpUpdate);
-
-           } else {
-               if (payload.diffAck===lastDiffHash) {
-                    wsBusy=false;
-                    lastDiffHash=null;
-                    document.title = file;
-                    updating = false;
-               }
-           }
-
-        };
-
-        ws.onclose = function() {
-           document.location.reload();
-        };
-
-        var updateWSPump = function (){
-            timeout=false;
-            if (wsBusy) {
-                timeout = setTimeout(updateWSPump,50);
-                return;
-            }
-            wsBusy=true;
-            document.title = file + "+";
-            updating=true;
-            fileText.value=editor.getValue();
-        };
-
-        return updateWSPump ;
-    },
-
-    getUpdateXHR = function () {
-        var xhr=null,
-        updateXHR =function(){
-            timeout=false;
-            if (xhr) {
-                timeout = setTimeout(updateXHR,50);
-                return;
-            }
-            document.title = file + "+";
-            updating = true;
-            xhr = new XMLHttpRequest();   // new HttpRequest instance
-            xhr.open("POST", "/edited");
-            xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-            xhr.onload = function () {
-                var ok = JSON.parse(xhr.responseText).ok;
-                if (xhr.readyState == 4 && xhr.status == "200") {
-                    if (ok) {
-                        xhr=null;
-                        updating=false;
-                        document.title = file;
-                    } else {
-                        return document.location.reload();
-                    }
+            };
+    
+            ws.onclose = function() {
+               document.location.reload();
+            };
+    
+            var updateWS = function (){
+                timeout=false;
+                if (wsBusy) {
+                    timeout = setTimeout(updateWS,50);
+                    return;
+                }
+                wsBusy=true;
+                document.title = file + "+";
+                updating = true;
+                ws.send(JSON.stringify({file:file,value:editor.getValue()}));
+            };
+    
+            return updateWS ;
+    
+        },
+    
+        getUpdateWSPump = function () {
+            var
+    
+            fileText,
+    
+            wsBusy=false,
+            ws = new WebSocket("ws://" + location.host + ws_prefix+file);
+    
+            var
+            lastDiffHash,
+            diffPumpUpdate = function(d,who,init){
+                lastDiffHash=d?d[2]:null;
+                if (lastDiffHash && !init) {
+                    ws.send(JSON.stringify({file:file,diff:d}));
                 }
             };
-            xhr.onerror = function () {
-                xhr=null;
-                updating=false;
+    
+            ws.onopen = function() {
+    
+                fileText = window.stringDiffRegex.diffPump(
+                    editor.getValue(),
+                    diffPumpUpdate,
+                    true);
+    
+                fileText.addEventListener(
+                    "change",
+                    function(text,mode){
+                        if (!blockChanges && mode !=="set") {
+                            blockChanges=true;
+    
+                            var pos = editor.session.selection.toJSON();
+                            editor.session.setValue(text);
+                            editor.session.selection.fromJSON(pos);
+    
+                            blockChanges=false;
+                        }
+                    });
+    
             };
-            xhr.send(JSON.stringify({file:file,value:editor.getValue()}));
-        };
-        return updateXHR;
-    },
-
-    updateProc = ("WebSocket" in window) ? getUpdateWSPump() : getUpdateXHR(),
-
-    updateProcErrorCheckWrap = function (msec) {
-        if (timeout) clearTimeout(timeout);
-        if (document.querySelectorAll("#editor div .ace_error").length > 0) {
-            document.title = file + "? (errors)";
-            timeout=setTimeout(updateProcErrorCheckWrap,msec,Math.max(msec*2,5000));
-        } else {
-            var hints = document.querySelectorAll("#editor div .ace_info").length;
-            if ( hints> 0) {
-                document.title = file + (updating ? "+" : "*")+ " "+hints+" warnings/hints";
+    
+            ws.onmessage = function (evt) {
+               var payload = JSON.parse(evt.data);
+    
+               if (!!payload.diff) {
+                    fileText.update(payload.diff,diffPumpUpdate);
+    
+               } else {
+                   if (payload.diffAck===lastDiffHash) {
+                        wsBusy=false;
+                        lastDiffHash=null;
+                        document.title = file;
+                        updating = false;
+                   }
+               }
+    
+            };
+    
+            ws.onclose = function() {
+               document.location.reload();
+            };
+    
+            var updateWSPump = function (){
+                timeout=false;
+                if (wsBusy) {
+                    timeout = setTimeout(updateWSPump,50);
+                    return;
+                }
+                wsBusy=true;
+                document.title = file + "+";
+                updating=true;
+                fileText.value=editor.getValue();
+            };
+    
+            return updateWSPump ;
+        },
+    
+        getUpdateXHR = function () {
+            var xhr=null,
+            updateXHR =function(){
+                timeout=false;
+                if (xhr) {
+                    timeout = setTimeout(updateXHR,50);
+                    return;
+                }
+                document.title = file + "+";
+                updating = true;
+                xhr = new XMLHttpRequest();   // new HttpRequest instance
+                xhr.open("POST", "/edited");
+                xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                xhr.onload = function () {
+                    var ok = JSON.parse(xhr.responseText).ok;
+                    if (xhr.readyState == 4 && xhr.status == "200") {
+                        if (ok) {
+                            xhr=null;
+                            updating=false;
+                            document.title = file;
+                        } else {
+                            return document.location.reload();
+                        }
+                    }
+                };
+                xhr.onerror = function () {
+                    xhr=null;
+                    updating=false;
+                };
+                xhr.send(JSON.stringify({file:file,value:editor.getValue()}));
+            };
+            return updateXHR;
+        },
+    
+        updateProc = ("WebSocket" in window) ? getUpdateWSPump() : getUpdateXHR(),
+    
+        updateProcErrorCheckWrap = function (msec) {
+            if (timeout) clearTimeout(timeout);
+            if (document.querySelectorAll("#editor div .ace_error").length > 0) {
+                document.title = file + "? (errors)";
+                timeout=setTimeout(updateProcErrorCheckWrap,msec,Math.max(msec*2,5000));
             } else {
-                document.title = file + (updating ? "+" : "*");
+                var hints = document.querySelectorAll("#editor div .ace_info").length;
+                if ( hints> 0) {
+                    document.title = file + (updating ? "+" : "*")+ " "+hints+" warnings/hints";
+                } else {
+                    document.title = file + (updating ? "+" : "*");
+                }
+                timeout=setTimeout(updateProc,5);
             }
-            timeout=setTimeout(updateProc,5);
-        }
-    };
-
-    editor.setOptions({
-      fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
-      fontSize: "16pt"
-    });
-
-    editor.getSession().on('change', function() {
-
-
-        if (blockChanges) return;
-        if (timeout) clearTimeout(timeout);
-        document.title = file + (updating ? "?" : "*");
-        timeout=setTimeout(updateProcErrorCheckWrap,1000,250);
+        };
+    
+        editor.setOptions({
+          fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
+          fontSize: "16pt"
+        });
+    
+        editor.getSession().on('change', function() {
+    
+    
+            if (blockChanges) return;
+            if (timeout) clearTimeout(timeout);
+            document.title = file + (updating ? "?" : "*");
+            timeout=setTimeout(updateProcErrorCheckWrap,1000,250);
+        });
     });
 }
 
@@ -400,7 +402,7 @@ function fileEditor(theme,file,app,append_html) {
     onclose,
     onopen,
     connects=[],
-    fileText = stringDiff.diffPump(fs.readFileSync(file,"utf8"),undefined,true),
+    fileText = stringDiffRegex.diffPump(fs.readFileSync(file,"utf8"),undefined,true),
     updaters=[],
     ok='{"ok":true}',
     notOk='{"ok":false}';
@@ -482,6 +484,9 @@ function fileEditor(theme,file,app,append_html) {
                             file_text : fileText.value
                         },"head");
                         
+                        html.append ("/js/polyfills.js","head");
+                        html.append ("/js/extensions.js","head");
+                        
                         html.append(
                             function (editor,file,file_text) {
                                 editor.setValue(file_text,-1);document.title=file;
@@ -494,8 +499,6 @@ function fileEditor(theme,file,app,append_html) {
                         if (append_html) {
                            html.append(append_html);
                         }
-
-                        html.append (string_diff_src_url,"head");
 
                         res.send(html.html);
                     } else {
@@ -614,7 +617,7 @@ function singleFileEditor(theme,file,port,append_html) {
 
     app.use(ace_lib_base_url,express.static(ace_dir));
     app.use(ace_editor_base_url,express.static(ace_editor_dir));
-    app.use(string_diff_src_url,express.static(string_diff_src_path));
+    //app.use(string_diff_src_url,express.static(string_diff_src_path));
 
     var listener = app.listen(port||0, function() {
         console.log('goto http://'+hostname+':' + listener.address().port+ ace_single_file_open_url + "/"+file);
@@ -671,10 +674,13 @@ function multiFileEditor(theme,files,port,append_html) {
 
     app.use(ace_lib_base_url,express.static(ace_dir));
     app.use(ace_editor_base_url,express.static(ace_editor_dir));
-    app.use(string_diff_src_url,express.static(string_diff_src_path));
+    //app.use(string_diff_src_url,express.static(string_diff_src_path));
 
-    var listener = app.listen(port||0, function() {
-        console.log('goto http://'+hostname+':' + listener.address().port+ace_multi_file_dashboard_url);
+    
+    Function.startServer(app,function(){
+        var listener = app.listen(port||0, function() {
+            console.log('goto http://'+hostname+':' + listener.address().port+ace_multi_file_dashboard_url);
+        });
     });
 
     var editors = {};
