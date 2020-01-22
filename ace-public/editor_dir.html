@@ -2,6 +2,8 @@
 <html>
     <head>
         <title></title>
+        <script src="/js/polyfills.js"></script>
+        <script src="/js/extensions.js"></script>
     </head>
     <body>
         <table>
@@ -10,6 +12,7 @@
                 <th>date/time</th>
                 <th>size</th>
                 <th>theme</th>
+                <th>mode</th>
                 <th>windows open</th>
                 <th>&nbsp;</th>
             </tr>
@@ -18,6 +21,7 @@
                 <td>${stats.mtime.toUTCString}</td>
                 <td>${stats.size}</td>
                 <td>${theme}</td>
+                <td>${mode}</td>
                 <td>${info.windowCount}</td>
                 <td>
                     <button data-file="${file}">edit</button>
