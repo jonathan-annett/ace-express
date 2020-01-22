@@ -278,6 +278,15 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
     });
 }
 
+function modeFromFilename(filename) {
+    return {
+               ".css":"css",
+               ".html":"html",
+               ".json":"json"
+           }[ filename.substr(filename.lastIndexOf(".")) ] || "javascript";
+}
+
+
 function getEditorMasterHTML (files,title,theme) {
     
     function loader() {
@@ -320,12 +329,15 @@ function getEditorMasterHTML (files,title,theme) {
         };
     }
     
+    
+   
      
    function getFiles () {
         var fileIndex = {};
         files.forEach(function(file){
             var filename = typeof file ==='string' ? file : file.file;
             var editor_theme = typeof file ==='string' ? theme : file.theme;
+            var editor_mode  = modeFromFilename(filename);
             var stats = fs.statSync(path.resolve(filename));
             
             try {    
@@ -333,6 +345,7 @@ function getEditorMasterHTML (files,title,theme) {
                     file  : filename,
                     stats : stats,
                     theme: editor_theme,
+                    mode : editor_mode,
                     info : {
                         windowCount : 0,
                         sha1 : "",
@@ -346,6 +359,7 @@ function getEditorMasterHTML (files,title,theme) {
                         mtime : new Date(0)
                     },
                     theme : editor_theme,
+                    mode : editor_mode,
                     info : {
                         windowCount : 0,
                         sha1 : "",
@@ -445,6 +459,11 @@ function fileEditor(theme,file,app,append_html) {
 
         if (theme) {
             html.replace(/ace\/theme\/twilight/,'ace/theme/'+theme);
+        }
+        
+        var editor_mode  = modeFromFilename(file);
+        if (editor_mode!=="javascript") {
+            html.replace(/ace\/mode\/javascript/,'ace/mode/'+editor_mode);
         }
 
         html.replace('src-noconflict/ace.js',ace_lib_base_url+'/src-min-noconflict/ace.js');
