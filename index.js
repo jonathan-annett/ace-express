@@ -332,7 +332,11 @@ function getEditorMasterHTML (files,title,theme) {
                 fileIndex[filename]= {
                     file  : filename,
                     stats : stats,
-                    editor_theme: editor_theme
+                    theme: editor_theme,
+                    info : {
+                        windowCount : 0,
+                        sha1 : "",
+                    }
                 };
             } catch (e) {
                 fileIndex[filename]= {
@@ -341,7 +345,11 @@ function getEditorMasterHTML (files,title,theme) {
                         size  : 0,
                         mtime : new Date(0)
                     },
-                    theme : theme
+                    theme : editor_theme,
+                    info : {
+                        windowCount : 0,
+                        sha1 : "",
+                    }
                 };
             }
         });
