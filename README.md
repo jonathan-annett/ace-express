@@ -41,13 +41,8 @@ optionally, set theme and port
 single file editor mode
 
     node -e 'require("ace-express").edit("chaos","./somefile.js",9000)'
-    
-or (if you have previously done 
 
-    npm install --save github:jonathan-annett/ace-express
-    
-or (if you have previously done 
-    
+or (if you have previously done `npm install --save github:jonathan-annett/ace-express` )
+
+
     node node_modules/ace-express --edit ./somefile.js --theme chaos --port 9000
-    
-   
