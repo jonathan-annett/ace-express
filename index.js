@@ -29,7 +29,7 @@ ace_multi_file_dashboard_url = "/ace/edit",
 ace_directory_row_re = new RegExp('<tr class="template_row.*<\/tr>','s'),
 ace_directory_html_raw= String.load(ace_directory_html_path),
 ace_directory_html= ace_directory_html_raw.replace(ace_directory_row_re,''),
-ace_directory_html_template = 
+ace_directory_html_template =
     ace_directory_row_re.exec(ace_directory_html_raw)[0]
        .replace(/<tr class="template_row.*>/,'<tr>'),
 
@@ -74,23 +74,23 @@ function isChromebook() {
 // they exist as vars in the outer scope which this code is
 // injected into.
 function singleFileEditorBrowserCode(editor,file,ws_prefix){
-
     Function.load("string-diff-regex",function(stringDiffRegex){
         var
-    
+
         timeout=false,
         blockChanges=false,
         updating=false,
+
         getUpdateWS = function () {
             var
             wsBusy=false,
             ws = new WebSocket("ws://" + location.host + ws_prefix+file);
             ws.onopen = function() {
-    
+
                // Web Socket is connected, send data using send()
               // ws.send('{"open":true}');
             };
-    
+
             ws.onmessage = function (evt) {
                var payload = JSON.parse(evt.data);
                if (payload.ok) {
@@ -99,27 +99,27 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                    document.title = file;
                } else {
                    if (payload.updated) {
-    
+
                        blockChanges=true;
-    
+
                        var pos = editor.session.selection.toJSON();
                        editor.session.setValue(payload.updated);
                        editor.session.selection.fromJSON(pos);
-    
+
                        blockChanges=false;
-    
-    
-    
+
+
+
                    } else {
                        return document.location.reload();
                    }
                }
             };
-    
+
             ws.onclose = function() {
                document.location.reload();
             };
-    
+
             var updateWS = function (){
                 timeout=false;
                 if (wsBusy) {
@@ -131,19 +131,19 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                 updating = true;
                 ws.send(JSON.stringify({file:file,value:editor.getValue()}));
             };
-    
+
             return updateWS ;
-    
+
         },
-    
+
         getUpdateWSPump = function () {
             var
-    
+
             fileText,
-    
+
             wsBusy=false,
             ws = new WebSocket("ws://" + location.host + ws_prefix+file);
-    
+
             var
             lastDiffHash,
             diffPumpUpdate = function(d,who,init){
@@ -152,36 +152,36 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                     ws.send(JSON.stringify({file:file,diff:d}));
                 }
             };
-    
+
             ws.onopen = function() {
-    
+
                 fileText = window.stringDiffRegex.diffPump(
                     editor.getValue(),
                     diffPumpUpdate,
                     true);
-    
+
                 fileText.addEventListener(
                     "change",
                     function(text,mode){
                         if (!blockChanges && mode !=="set") {
                             blockChanges=true;
-    
+
                             var pos = editor.session.selection.toJSON();
                             editor.session.setValue(text);
                             editor.session.selection.fromJSON(pos);
-    
+
                             blockChanges=false;
                         }
                     });
-    
+
             };
-    
+
             ws.onmessage = function (evt) {
                var payload = JSON.parse(evt.data);
-    
+
                if (!!payload.diff) {
                     fileText.update(payload.diff,diffPumpUpdate);
-    
+
                } else {
                    if (payload.diffAck===lastDiffHash) {
                         wsBusy=false;
@@ -190,13 +190,13 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                         updating = false;
                    }
                }
-    
+
             };
-    
+
             ws.onclose = function() {
                document.location.reload();
             };
-    
+
             var updateWSPump = function (){
                 timeout=false;
                 if (wsBusy) {
@@ -208,10 +208,10 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                 updating=true;
                 fileText.value=editor.getValue();
             };
-    
+
             return updateWSPump ;
         },
-    
+
         getUpdateXHR = function () {
             var xhr=null,
             updateXHR =function(){
@@ -245,9 +245,9 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
             };
             return updateXHR;
         },
-    
+
         updateProc = ("WebSocket" in window) ? getUpdateWSPump() : getUpdateXHR(),
-    
+
         updateProcErrorCheckWrap = function (msec) {
             if (timeout) clearTimeout(timeout);
             if (document.querySelectorAll("#editor div .ace_error").length > 0) {
@@ -263,54 +263,53 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                 timeout=setTimeout(updateProc,5);
             }
         };
-    
+
         editor.setOptions({
           fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
           fontSize: "16pt"
         });
-    
+
         editor.getSession().on('change', function() {
-    
-    
+
+
             if (blockChanges) return;
             if (timeout) clearTimeout(timeout);
             document.title = file + (updating ? "?" : "*");
             timeout=setTimeout(updateProcErrorCheckWrap,1000,250);
         });
+
     });
 }
 
 function modeFromFilename(filename) {
-    return {
-               ".css":"css",
+    return {   ".css":"css",
                ".html":"html",
-               ".json":"json"
-           }[ filename.substr(filename.lastIndexOf(".")) ] || "javascript";
+               ".json":"json" }
+           [ filename.substr(filename.lastIndexOf(".")) ] || "javascript";
 }
 
-
 function getEditorMasterHTML (files,title,theme) {
-    
+
     function loader() {
-        
+
 
         function editFile (file) {
             file = typeof file==='object' && file.target ? file.target.dataset.file: file;
             window.open(ace_single_file_edit_url+file,"_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
         }
-        
+
         document.querySelectorAll("[data-file]").forEach(
             function(btn) {
                 btn.addEventListener("click",editFile);
             }
         );
-        
-        
+
+
 
     }
-    
+
     function temp() {
-        
+
         var
         ws = new WebSocket("ws://" + location.host + ws_prefix+"/_index");
         ws.onopen = function() {
@@ -322,7 +321,7 @@ function getEditorMasterHTML (files,title,theme) {
         ws.onmessage = function (evt) {
            var payload = JSON.parse(evt.data);
            if (payload.file) {
-               
+
            }
         };
 
@@ -330,10 +329,10 @@ function getEditorMasterHTML (files,title,theme) {
            document.location.reload();
         };
     }
-    
-    
-   
-     
+
+
+
+
    function getFiles () {
         var fileIndex = {};
         files.forEach(function(file){
@@ -341,8 +340,8 @@ function getEditorMasterHTML (files,title,theme) {
             var editor_theme = typeof file ==='string' ? theme : file.theme;
             var editor_mode  = modeFromFilename(filename);
             var stats = fs.statSync(path.resolve(filename));
-            
-            try {    
+
+            try {
                 fileIndex[filename]= {
                     file  : filename,
                     stats : stats,
@@ -369,14 +368,14 @@ function getEditorMasterHTML (files,title,theme) {
                 };
             }
         });
-        
+
         return fileIndex;
     }
 
     return function getEditLaunchHtml(req,res) {
-        
+
         var html =  ace_directory_html.htmlGenerator();
-            
+
         html.append(ace_editor_css_url);
         html.append(title,"title");
         var filesNow = getFiles ();
@@ -385,11 +384,11 @@ function getEditorMasterHTML (files,title,theme) {
             ace_single_file_edit_url : ace_single_file_edit_url,
             files : filesNow
         },"head");
-        
+
         html.append(
           ace_directory_html_template.renderWithObject(Object.values(filesNow)),
           "table");
-            
+
         html.append(loader,"body");
         res.send(html.html);
     };
@@ -462,7 +461,7 @@ function fileEditor(theme,file,app,append_html) {
         if (theme) {
             html.replace(/ace\/theme\/twilight/,'ace/theme/'+theme);
         }
-        
+
         var editor_mode  = modeFromFilename(file);
         if (editor_mode!=="javascript") {
             html.replace(/ace\/mode\/javascript/,'ace/mode/'+editor_mode);
@@ -477,16 +476,16 @@ function fileEditor(theme,file,app,append_html) {
                 fs.readFile(file,"utf8",function(err,text){
                     if (!err && typeof text==='string') {
                         fileText.value = text;
-                        
+
                         html.append({
                             ws_prefix : ws_prefix,
                             file      : file,
                             file_text : fileText.value
                         },"head");
-                        
+
                         html.append ("/js/polyfills.js","head");
                         html.append ("/js/extensions.js","head");
-                        
+
                         html.append(
                             function (editor,file,file_text) {
                                 editor.setValue(file_text,-1);document.title=file;
@@ -667,7 +666,7 @@ function multiFileEditor(theme,files,port,append_html) {
 
     var app = express();
     var expressWs = require('express-ws')(app);
-    
+
     app.use(remote_ip());
     app.use(favicon());
     app.use(require('body-parser').json());
@@ -676,7 +675,7 @@ function multiFileEditor(theme,files,port,append_html) {
     app.use(ace_editor_base_url,express.static(ace_editor_dir));
     //app.use(string_diff_src_url,express.static(string_diff_src_path));
 
-    
+
     Function.startServer(app,function(){
         var listener = app.listen(port||0, function() {
             console.log('goto http://'+hostname+':' + listener.address().port+ace_multi_file_dashboard_url);
@@ -739,11 +738,11 @@ function nodeCLI(argv) {
             }
 
         }
-        
+
         ix = argv.indexOf("--dirs");
         if (ix>=2 && ix < argv.length-1 ) {
             ix ++;
-            var 
+            var
             dirname = argv[ix],
             file_path_mapper = function(fn){return path.join(dirname,fn);};
 
@@ -806,8 +805,6 @@ Object.defineProperties(ace,{
            });
 
            app.use(ace_lib_base_url,express.static(ace_dir));
-
-
        },
        configurable:true,enumerable:true
    },
