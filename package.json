@@ -15,7 +15,7 @@
         "express-ws": "^4.0.0",
         "jsextensions": "github:jonathan-annett/jsextensions#8ef6ba16238b97ec933aca9bfb4507e3df6ab9e7",
         "serve-favicon": "github:jonathan-annett/serve-favicon#612c1a1b6301dc4ab0512bd467a8239e81a2af04",
-        "string-diff-regex": "github:jonathan-annett/string-diff-regex#45e4035448e75c3732c2730470cf964705147708"
+        "string-diff-regex": "github:jonathan-annett/string-diff-regex#7c98f6c5171c1a582bbd2f5b9946a90c4ca76d09"
     },
     "devDependencies": {},
     "scripts": {
