@@ -483,8 +483,8 @@ function fileEditor(theme,file,app,append_html) {
                             file_text : fileText.value
                         },"head");
 
-                        html.append ("/js/polyfills.js","head");
-                        html.append ("/js/extensions.js","head");
+                        html.append ("/js/polyfills.min.js","head");
+                        html.append ("/js/extensions.min.js","head");
 
                         html.append(
                             function (editor,file,file_text) {
