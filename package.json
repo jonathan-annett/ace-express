@@ -13,7 +13,7 @@
         "body-parser": "^1.19.0",
         "express": "^4.17.1",
         "express-ws": "^4.0.0",
-        "jsextensions": "github:jonathan-annett/jsextensions#f2bc4d3f61f2fb71be0bde1220c76761e92cd543",
+        "jsextensions": "github:jonathan-annett/jsextensions#698b60e4fa75c4276b58a411d5b36217a811c1a0",
         "serve-favicon": "github:jonathan-annett/serve-favicon#612c1a1b6301dc4ab0512bd467a8239e81a2af04",
         "string-diff-regex": "github:jonathan-annett/string-diff-regex#bc72a6c8d4dbfc7db86b28f89e6d402640fd1605"
     },
