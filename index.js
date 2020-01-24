@@ -25,6 +25,10 @@ ace_editor_js_url   = "/ace/edit_/editor.js",
 ace_single_file_open_url = "/ace/edit",
 ace_single_file_edit_url = "/ace/editing/",
 
+ace_single_file_debug_url = "/ace/debuging/",
+ace_single_file_serve_url = "/ace/serving/",
+
+
 ace_multi_file_dashboard_url = "/ace/edit",
 
 ace_directory_row_re = new RegExp('<tr class="template_row.*<\/tr>','s'),
@@ -325,14 +329,46 @@ function getEditorMasterHTML (files,title,theme) {
             if (typeof file==='object' && file.target) {
                 if (file.preventDefault) file.preventDefault();
                 if (file.stopImmediatePropagation) file.stopImmediatePropagation();
-                file = file.target.dataset.file;
+                file = file.target.dataset.fileEdit;
             }
             window.open(ace_single_file_edit_url+file,"_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
         }
 
-        document.querySelectorAll("[data-file]").forEach(
+        function debugFile (file) {
+            if (typeof file==='object' && file.target) {
+                if (file.preventDefault) file.preventDefault();
+                if (file.stopImmediatePropagation) file.stopImmediatePropagation();
+                file = file.target.dataset.fileDebug;
+            }
+            window.open(ace_single_file_debug_url+file,"_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
+        }
+
+
+        function serveFile (file) {
+            if (typeof file==='object' && file.target) {
+                if (file.preventDefault) file.preventDefault();
+                if (file.stopImmediatePropagation) file.stopImmediatePropagation();
+                file = file.target.dataset.fileServe;
+            }
+            window.open(ace_single_file_serve_url+file,"_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
+        }
+
+
+        document.querySelectorAll("[data-file-edit]").forEach(
             function(btn) {
                 btn.addEventListener("click",editFile);
+            }
+        );
+
+        document.querySelectorAll("[data-file-debug]").forEach(
+            function(btn) {
+                btn.addEventListener("click",debugFile);
+            }
+        );
+
+        document.querySelectorAll("[data-file-serve]").forEach(
+            function(btn) {
+                btn.addEventListener("click",serveFile);
             }
         );
 
@@ -541,6 +577,9 @@ function fileEditor(theme,file,app,append_html) {
     }
 
     app.get(ace_single_file_edit_url+file,getEditorHtml);
+    app.use(ace_single_file_serve_url,express.static(path.resolve(".")));
+
+
 
     app.post("/edited/"+file,editedCallback);
 
@@ -895,7 +934,7 @@ function nodeCLI(argv) {
 
             while (dirname) {
                 if (fs.existsSync(dirname)&& fs.statSync(dirname).isDirectory() ) {
-                        files=files.concat(fs.readdirSync(dirname).map(file_path_mapper))
+                        files=files.concat(fs.readdirSync(dirname,{recursive:true}).map(file_path_mapper))
                     }
                 ix ++;
                 if (ix >= argv.length-1 ) return files;
