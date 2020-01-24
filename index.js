@@ -35,7 +35,8 @@ ace_directory_html_template =
 
 ace_dir         = path.join(path.dirname(ace_file),".."),
 edit_html       = fs.readFileSync(ace_editor_html_path,"utf8"),
-demo_html       = edit_html,
+demo_html_raw   = fs.readFileSync(path.join(ace_dir,"editor.html"),"utf8"),
+demo_html       = demo_html_raw,
 demos           = fs.readdirSync(path.join(ace_dir, "demo")).filter(function(x){return x.endsWith(".html");}),
 stringDiffRegex = require ("string-diff-regex"),
 string_diff_src_path = require.resolve("string-diff-regex"),
@@ -73,9 +74,11 @@ function isChromebook() {
 // the "arguments" here are just for linting purposes
 // they exist as vars in the outer scope which this code is
 // injected into.
-function singleFileEditorBrowserCode(editor,file,ws_prefix){
+function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_prefix){
     Function.load("string-diff-regex",function(stringDiffRegex){
         var
+
+        editor = ace.edit("editor"),
 
         timeout=false,
         blockChanges=false,
@@ -120,7 +123,7 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                document.location.reload();
             };
 
-            var updateWS = function (){
+            var updateWS = function (payload){
                 timeout=false;
                 if (wsBusy) {
                     timeout = setTimeout(updateWS,50);
@@ -129,7 +132,10 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                 wsBusy=true;
                 document.title = file + "+";
                 updating = true;
-                ws.send(JSON.stringify({file:file,value:editor.getValue()}));
+                payload=payload||{};
+                payload.file=file;
+                payload.value=editor.getValue();
+                ws.send(JSON.stringify(payload));
             };
 
             return updateWS ;
@@ -149,7 +155,11 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
             diffPumpUpdate = function(d,who,init){
                 lastDiffHash=d?d[2]:null;
                 if (lastDiffHash && !init) {
-                    ws.send(JSON.stringify({file:file,diff:d}));
+                    var payload = fileText.payload || {};
+                    payload.file=file;
+                    payload.diff=d;
+                    ws.send(JSON.stringify(payload));
+                    if (fileText.payload) delete fileText.payload;
                 }
             };
 
@@ -197,7 +207,7 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                document.location.reload();
             };
 
-            var updateWSPump = function (){
+            var updateWSPump = function (payload){
                 timeout=false;
                 if (wsBusy) {
                     timeout = setTimeout(updateWSPump,50);
@@ -206,6 +216,7 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                 wsBusy=true;
                 document.title = file + "+";
                 updating=true;
+                fileText.payload = payload;
                 fileText.value=editor.getValue();
             };
 
@@ -214,7 +225,7 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
 
         getUpdateXHR = function () {
             var xhr=null,
-            updateXHR =function(){
+            updateXHR =function(payload){
                 timeout=false;
                 if (xhr) {
                     timeout = setTimeout(updateXHR,50);
@@ -241,28 +252,43 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
                     xhr=null;
                     updating=false;
                 };
-                xhr.send(JSON.stringify({file:file,value:editor.getValue()}));
+                payload=payload||{};
+                payload.file=file;
+                payload.value=editor.getValue();
+                xhr.send(JSON.stringify(payload));
             };
             return updateXHR;
         },
 
         updateProc = ("WebSocket" in window) ? getUpdateWSPump() : getUpdateXHR(),
 
-        updateProcErrorCheckWrap = function (msec) {
+        updateProcErrorCheckWrap = function (msec,last_payload) {
+            var payload = {
+                errors:document.querySelectorAll("#editor div .ace_error").length,
+                warnings:document.querySelectorAll("#editor div .ace_warning").length,
+                hints:document.querySelectorAll("#editor div .ace_hint").length
+            };
+
             if (timeout) clearTimeout(timeout);
-            if (document.querySelectorAll("#editor div .ace_error").length > 0) {
+            if (payload.errors > 0 && ((!last_payload) || (last_payload && last_payload.errors!==payload.errors))) {
                 document.title = file + "? (errors)";
-                timeout=setTimeout(updateProcErrorCheckWrap,msec,Math.max(msec*2,5000));
+                timeout=setTimeout(updateProcErrorCheckWrap,msec,Math.max(msec*2,5000),payload);
             } else {
-                var hints = document.querySelectorAll("#editor div .ace_info").length;
-                if ( hints> 0) {
-                    document.title = file + (updating ? "+" : "*")+ " "+hints+" warnings/hints";
+                if ( payload.warnings+payload.errors  > 0) {
+                    document.title = file + (updating ? "+" : "*")+ " "+payload.warnings+payload.errors + " warnings/errors";
                 } else {
                     document.title = file + (updating ? "+" : "*");
                 }
-                timeout=setTimeout(updateProc,5);
+                timeout=setTimeout(updateProc,5,payload);
             }
         };
+
+        editor.setTheme("ace/theme/"+(theme||"cobalt"));
+        editor.session.setMode("ace/mode/"+(editor_mode||"javascript"));
+
+        editor.setValue(file_text,-1);
+        document.title=file;
+        file_text=null;
 
         editor.setOptions({
           fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
@@ -277,6 +303,7 @@ function singleFileEditorBrowserCode(editor,file,ws_prefix){
             document.title = file + (updating ? "?" : "*");
             timeout=setTimeout(updateProcErrorCheckWrap,1000,250);
         });
+
 
     });
 }
@@ -304,14 +331,8 @@ function getEditorMasterHTML (files,title,theme) {
             }
         );
 
-
-
-    }
-
-    function temp() {
-
         var
-        ws = new WebSocket("ws://" + location.host + ws_prefix+"/_index");
+        ws = new WebSocket("ws://" + location.host + ws_prefix+"_index");
         ws.onopen = function() {
 
            // Web Socket is connected, send data using send()
@@ -320,17 +341,32 @@ function getEditorMasterHTML (files,title,theme) {
 
         ws.onmessage = function (evt) {
            var payload = JSON.parse(evt.data);
-           if (payload.file) {
+
+           var file,
+               id_prefix="dir_"+payload.file.sha1+"_",
+               update=function(k) {
+                 if (payload[k]) {
+                    document.getElementById(id_prefix+k).innerHTML=(file[k]=payload[k]).toString();
+                 }
+               };
+           if (payload.file && (file=files[payload.file]) ) {
+
+                payload.errwarn=(payload.errors||"0")+"/"+(payload.warnings||"0");
+
+                update("size");
+                update("mtime");
+                update("sha1");
+                update("windowCount");
+                update("errwarn");
 
            }
         };
 
         ws.onclose = function() {
-           document.location.reload();
+           //document.location.reload();
         };
+
     }
-
-
 
 
    function getFiles () {
@@ -343,28 +379,27 @@ function getEditorMasterHTML (files,title,theme) {
 
             try {
                 fileIndex[filename]= {
+                    id    : filename.sha1,
                     file  : filename,
-                    stats : stats,
+                    size: stats.size,
+                    mtime: stats.mtime,
                     theme: editor_theme,
                     mode : editor_mode,
-                    info : {
-                        windowCount : 0,
-                        sha1 : "",
-                    }
-                };
+                    windowCount : 0,
+                    sha1 : "",
+                    errwarn : "?"
+            };
             } catch (e) {
                 fileIndex[filename]= {
+                    id    : filename.sha1,
                     file  : filename,
-                    stats  : {
-                        size  : 0,
-                        mtime : new Date(0)
-                    },
+                    size  : 0,
+                    mtime : new Date(0),
                     theme : editor_theme,
                     mode : editor_mode,
-                    info : {
-                        windowCount : 0,
-                        sha1 : "",
-                    }
+                    windowCount : 0,
+                    sha1 : "",
+                    errwarn : ""
                 };
             }
         });
@@ -443,6 +478,7 @@ function fileEditor(theme,file,app,append_html) {
 
             if (payload.file===file && typeof payload.diff==='object') {
                 fileText.update(payload.diff,sender.updateDiff);
+                fileText.payload = payload;
                 sender.send('{"diffAck":"'+payload.diff[2]+'"}');
             } else {
                 sender.send(notOk);
@@ -458,15 +494,6 @@ function fileEditor(theme,file,app,append_html) {
 
         var html = edit_html.htmlGenerator();
 
-        if (theme) {
-            html.replace(/ace\/theme\/twilight/,'ace/theme/'+theme);
-        }
-
-        var editor_mode  = modeFromFilename(file);
-        if (editor_mode!=="javascript") {
-            html.replace(/ace\/mode\/javascript/,'ace/mode/'+editor_mode);
-        }
-
         html.replace('src-noconflict/ace.js',ace_lib_base_url+'/src-min-noconflict/ace.js');
 
         html.replace(new RegExp("(?<=<pre id=.*>).*(?=<\/pre>)","gs"),'');
@@ -478,20 +505,16 @@ function fileEditor(theme,file,app,append_html) {
                         fileText.value = text;
 
                         html.append({
-                            ws_prefix : ws_prefix,
-                            file      : file,
-                            file_text : fileText.value
+                            ws_prefix    : ws_prefix,
+                            file         : file,
+                            file_text    : fileText.value,
+                            theme        : theme,
+                            editor_mode  : modeFromFilename(file),
                         },"head");
 
                         html.append ("/js/polyfills.min.js","head");
                         html.append ("/js/extensions.min.js","head");
 
-                        html.append(
-                            function (editor,file,file_text) {
-                                editor.setValue(file_text,-1);document.title=file;
-                                file_text=null;
-                            }
-                        );
 
                         html.append(singleFileEditorBrowserCode);
 
@@ -563,11 +586,6 @@ function fileEditor(theme,file,app,append_html) {
 
           if (typeof onopen==='function') onopen(file,ws,updaters);
 
-
-
-          //connects.push(ws);
-          //console.log({newconnect:connects.map(function(ws){return "ws";})});
-
     });
 
     return Object.defineProperties({},{
@@ -577,12 +595,13 @@ function fileEditor(theme,file,app,append_html) {
                 if (typeof fn ==='function') {
                     switch (e) {
                         case "change": onchange = fn; break;
-                        case "open": onopen = fn; break;
-                        case "close": onclose = fn; break;
+                        case "open":   onopen   = fn; break;
+                        case "close":  onclose  = fn; break;
                     }
                 }
             },
-            enumerable : true,configurable: true
+            enumerable   : true,
+            configurable : true
         },
         text : {
             set : function (value){
@@ -600,7 +619,11 @@ function fileEditor(theme,file,app,append_html) {
                 return fileText.value;
             },
             enumerable : true,configurable: true
-        }
+        },
+        sha1     : { get : function (){return (fileText.payload ? fileText.payload.diff[2] : fileText.value.sha1); }},
+        errors   : { get : function (){return (fileText.payload ? fileText.payload.errors   : 0); }},
+        warnings : { get : function (){return (fileText.payload ? fileText.payload.warnings : 0); }},
+        hints    : { get : function (){return (fileText.payload ? fileText.payload.hints    : 0); }}
     });
 
 }
@@ -675,36 +698,147 @@ function multiFileEditor(theme,files,port,append_html) {
     app.use(ace_editor_base_url,express.static(ace_editor_dir));
     //app.use(string_diff_src_url,express.static(string_diff_src_path));
 
+    var editors = {};
 
     Function.startServer(app,function(){
         var listener = app.listen(port||0, function() {
             console.log('goto http://'+hostname+':' + listener.address().port+ace_multi_file_dashboard_url);
+
+            var connected = {},ids=[];
+
+            files.forEach(function(file){
+                var editor_theme = typeof file ==='string' ? theme : file.theme;
+                var filename = typeof file ==='string' ? file : file.file;
+                var editor = fileEditor(editor_theme,filename,app,append_html);
+                editors[filename] = editor;
+                editor.on("change",function(){
+                    var args = Function.args(arguments);
+                    console.log(args);
+                    emit("change",[{file:editor.file,text:editor.text}]);
+                    var msg={
+                        file:    filename,
+                        sha1:    editor.sha1,
+                        size:    editor.text.length,
+                        errors:  editor.errors,
+                        warnings: editor.warnings,
+                        hints:   editor.hints
+                    };
+                    ids.forEach(function(id){
+                        connected[id].send(msg);
+                    });
+                });
+                editor.on("open",function(x,ws,updaters){
+                    emit("open",[{file:editor.file,text:editor.text}]);
+                    var msg = {file:filename,windowCount:updaters.length};
+                    ids.forEach(function(id){
+                        connected[id].send(msg);
+                    });
+                });
+                editor.on("close",function(x,updaters){
+                    emit("close",[{file:editor.file}]);
+                    var msg = {file:filename,windowCount:updaters.length};
+                    ids.forEach(function(id){
+                        connected[id].send(msg);
+                    });
+                });
+            });
+
+            app.get(ace_multi_file_dashboard_url,getEditorMasterHTML (files, "editing files",theme) );
+
+
+
+
+            function wsId(randDigits,msecDigits) {
+                return ( Array(1+randDigits).join('z')+
+                         Math.floor(Math.random()*Number.MAX_SAFE_INTEGER).toString(36)
+                       ).substr(0-randDigits)+'-'+Date.now().toString(36).substr(0-msecDigits);
+            }
+
+            function wsAge(id) {
+                var when   = Date.now();
+                var ref    = when.toString(36);
+                var len    = id.length - id.indexOf('-') - 1;
+                var digits = id.replace(/.*-/,ref.substr(0,ref.length-len));
+                return (when - Number.parseInt(digits,36))/1000;
+            }
+
+            function wsIdAgeTest() {
+
+                setTimeout(function(id){
+                    var age = wsAge(id);
+                    console.log("wsIdAgeTest():",id,"is",age.toFixed(3),"seconds old");
+                    if (age < 1 || age > 1.050) {
+                        throw new Error ("wsAge() self test failed");
+                    }
+                },1000,wsId(10,6));
+
+            }
+
+
+            wsIdAgeTest();
+
+
+            app.use(function (req, res, next) {
+                 req.ws_id =wsId(10,6);
+                 return next();
+            });
+
+
+            app.ws(ws_prefix+"_index", function(ws,req) {
+                  ws.id=req.ws_id;
+
+                  connected[ws.id]=Object.defineProperties({},{
+                      age  : { get : wsAge.bind(this,ws.id),enumerable:true },
+                      last_active : {value : Date.now(), writable: true, enumerable:false },
+                      active : {get : function(){return (Date.now()-this.last_active)/1000},enumerable:true },
+                      id   : {value : ws.id, writable: false, enumerable:true },
+                      send : {value : function(obj) {
+                          if (!this.connected) return;
+                          ws.send(JSON.stringify(obj));
+                          console.log({sent:obj,id:ws.id});
+                          this.last_active = Date.now();
+                      }},
+                      connected : {value : true, writable: true, enumerable:true },
+                      onmsg : { value : function(fn) {
+                        ws.on('message', function(msg) {
+                            if (!this.connected) return;
+                            this.last_active = Date.now();
+                            try {
+                                console.log({recv:msg,id:ws.id});
+                                fn (JSON.parse(msg))
+                            } catch (e) {
+
+                            }
+                        });
+                      }}
+                  });
+                  ids=Object.keys(connected);
+
+                  console.dir({connected:connected[ws.id]},{getters:true,colors:true,depth:null});
+
+                  ws.on('close', function() {
+                        console.dir({closed:connected[ws.id]},{getters:true,colors:true,depth:null});
+                        connected[ws.id].connected=false;
+                        delete connected[ws.id];
+                  });
+
+                  ws.on('error', function(err) {
+                        console.dir({error:err,ws:connected[ws.id]},{getters:true,colors:true,depth:null});
+                        connected[ws.id].connected=false;
+                        delete connected[ws.id];
+                  });
+
+            });
         });
     });
 
-    var editors = {};
-    files.forEach(function(file){
-        var editor_theme = typeof file ==='string' ? theme : file.theme;
-        var filename = typeof file ==='string' ? file : file.file;
-        var editor = fileEditor(editor_theme,filename,app,append_html);
-        editors[filename] = editor;
-        editor.on("change",function(){
-            emit("change",[{file:editor.file,text:editor.text}]);
-        });
-        editor.on("open",function(){
-            emit("open",[{file:editor.file,text:editor.text}]);
-        });
-        editor.on("close",function(){
-            emit("close",[{file:editor.file}]);
-        });
-    });
 
-    app.get(ace_multi_file_dashboard_url,getEditorMasterHTML (files, "editing files",theme) );
+
 
     return Object.defineProperties( self,
         {
-            files : { value : editors, enumerable:true},
-            addEventListener : { value : addEventListener , enumerable:true} ,
+            files               : { value : editors, enumerable:true},
+            addEventListener    : { value : addEventListener , enumerable:true} ,
             removeEventListener : { value : removeEventListener, enumerable:true},
         }
     );
@@ -810,7 +944,7 @@ Object.defineProperties(ace,{
    },
    demo : {
     value : function (theme,port) {
-        demo_html=theme? edit_html.split('ace/theme/twilight').join('ace/theme/'+theme) : edit_html;
+        demo_html=theme? demo_html_raw.split('ace/theme/twilight').join('ace/theme/'+theme) : demo_html_raw;
         var app;
         ace.express(app=express());
         var listener = app.listen(port||3000, function() {

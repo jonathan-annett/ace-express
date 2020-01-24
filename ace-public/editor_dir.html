@@ -13,18 +13,22 @@
                 <th>size</th>
                 <th>theme</th>
                 <th>mode</th>
-                <th>windows open</th>
+                <th>editors</th>
+                <th>sha1</th>
+                <th>errors/warnings</th>
                 <th>&nbsp;</th>
             </tr>
             <tr class="template_row">
-                <td><a data-file="${file}" href="#">${file}</a></td>
-                <td>${stats.mtime.toUTCString}</td>
-                <td>${stats.size}</td>
-                <td>${theme}</td>
-                <td>${mode}</td>
-                <td>${info.windowCount}</td>
+                <td><a data-id="${id}" data-file="${file}" href="#">${file}</a></td>
+                <td id="dir_${id}_mtime">${stats.mtime.toUTCString}</td>
+                <td id="dir_${id}_size">${stats.size}</td>
+                <td id="dir_${id}_theme">${theme}</td>
+                <td id="dir_${id}_mode">${mode}</td>
+                <td id="dir_${id}_windowCount">${info.windowCount}</td>
+                <td id="dir_${id}_sha1">${info.sha1}</td>
+                <td id="dir_${id}_errwarn">${info.errwarn}</td>
                 <td>
-                    <button data-file="${file}">edit</button>
+                    <button data-id="${id}" data-file="${file}">edit</button>
                 </td>
             </tr>
         </table>
