@@ -4,6 +4,7 @@ var
 
 fs                      = require("fs"),
 path                    = require("path"),
+child_process           = require("child_process"),
 express                 = require("express"),
 favicon                 = require('serve-favicon'),
 jsextensions            = require('jsextensions'),
@@ -321,7 +322,11 @@ function getEditorMasterHTML (files,title,theme) {
 
 
         function editFile (file) {
-            file = typeof file==='object' && file.target ? file.target.dataset.file: file;
+            if (typeof file==='object' && file.target) {
+                if (file.preventDefault) file.preventDefault();
+                if (file.stopImmediatePropagation) file.stopImmediatePropagation();
+                file = file.target.dataset.file;
+            }
             window.open(ace_single_file_edit_url+file,"_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
         }
 
@@ -642,7 +647,9 @@ function singleFileEditor(theme,file,port,append_html) {
     //app.use(string_diff_src_url,express.static(string_diff_src_path));
 
     var listener = app.listen(port||0, function() {
-        console.log('goto http://'+hostname+':' + listener.address().port+ ace_single_file_open_url + "/"+file);
+        var url =  'http://'+hostname+':' + listener.address().port+ ace_single_file_open_url + "/"+file;
+        console.log('goto '+url);
+        child_process.spawn("xdg-open",[url]);
     });
 
     app.get(ace_single_file_open_url+"/"+file,getEditorMasterHTML ([file],file,theme));
@@ -702,7 +709,7 @@ function multiFileEditor(theme,files,port,append_html) {
 
     Function.startServer(app,function(){
         var listener = app.listen(port||0, function() {
-            console.log('goto http://'+hostname+':' + listener.address().port+ace_multi_file_dashboard_url);
+
 
             var connected = {},ids=[];
 
@@ -829,6 +836,11 @@ function multiFileEditor(theme,files,port,append_html) {
                   });
 
             });
+
+            var url =  'http://'+hostname+':' + listener.address().port+ace_multi_file_dashboard_url;
+            console.log('goto '+url);
+            child_process.spawn("xdg-open",[url]);
+
         });
     });
 
@@ -843,6 +855,7 @@ function multiFileEditor(theme,files,port,append_html) {
         }
     );
 }
+
 
 function nodeCLI(argv) {
 
@@ -948,7 +961,9 @@ Object.defineProperties(ace,{
         var app;
         ace.express(app=express());
         var listener = app.listen(port||3000, function() {
-          console.log('goto http://'+hostname+':' + listener.address().port+ace_lib_base_url+"/editor.html");
+            var url =  'http://'+hostname+':' + listener.address().port+ace_lib_base_url+"/editor.html"
+            console.log('goto '+url);
+            child_process.spawn("xdg-open",[url]);
         });
 
     },
