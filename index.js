@@ -8,9 +8,11 @@ child_process           = require("child_process"),
 express                 = require("express"),
 favicon                 = require('serve-favicon'),
 jsextensions            = require('jsextensions'),
+md2html                 = require('@bonniernews/md2html').render,
 ace_file                = require.resolve("ace-builds"),
 ace_editor_dir          = path.join(__dirname,"ace-public"),
 ace_editor_html_path    = path.join(__dirname,"ace-public","editor.html"),
+ace_editor_debug_path    = path.join(__dirname,"ace-public","debug.html"),
 ace_editor_css_path     = path.join(__dirname,"ace-public","editor.css"),
 ace_directory_html_path = path.join(__dirname,"ace-public","editor_dir.html"),
 //ace_editor_js_path   = path.join(__dirname,"ace-public","editor.js"),
@@ -23,10 +25,11 @@ ace_editor_css_url  = "/ace/edit_/editor.css",
 ace_editor_js_url   = "/ace/edit_/editor.js",
 
 ace_single_file_open_url = "/ace/edit",
-ace_single_file_edit_url = "/ace/editing/",
 
+ace_single_file_edit_url = "/ace/editing/",
 ace_single_file_debug_url = "/ace/debuging/",
 ace_single_file_serve_url = "/ace/serving/",
+
 
 
 ace_multi_file_dashboard_url = "/ace/edit",
@@ -40,6 +43,7 @@ ace_directory_html_template =
 
 ace_dir         = path.join(path.dirname(ace_file),".."),
 edit_html       = fs.readFileSync(ace_editor_html_path,"utf8"),
+debug_html       = fs.readFileSync(ace_editor_debug_path,"utf8"),
 demo_html_raw   = fs.readFileSync(path.join(ace_dir,"editor.html"),"utf8"),
 demo_html       = demo_html_raw,
 demos           = fs.readdirSync(path.join(ace_dir, "demo")).filter(function(x){return x.endsWith(".html");}),
@@ -316,8 +320,18 @@ function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_
 function modeFromFilename(filename) {
     return {   ".css":"css",
                ".html":"html",
-               ".json":"json" }
+               ".json":"json",
+               ".md" : "markdown",
+               ".markdown" : "markdown"}
            [ filename.substr(filename.lastIndexOf(".")) ] || "javascript";
+}
+
+function debugButtonTextFromFilename(filename) {
+    return {   ".html" : "view",
+               ".json" : "",
+               ".markdown" : "view",
+               ".md"   : "view" }
+           [ filename.substr(filename.lastIndexOf(".")) ] || "debug";
 }
 
 function getEditorMasterHTML (files,title,theme) {
@@ -416,6 +430,7 @@ function getEditorMasterHTML (files,title,theme) {
             var filename = typeof file ==='string' ? file : file.file;
             var editor_theme = typeof file ==='string' ? theme : file.theme;
             var editor_mode  = modeFromFilename(filename);
+            var debug_text   = debugButtonTextFromFilename(filename);
             var stats = fs.statSync(path.resolve(filename));
 
             try {
@@ -426,6 +441,7 @@ function getEditorMasterHTML (files,title,theme) {
                     mtime: stats.mtime,
                     theme: editor_theme,
                     mode : editor_mode,
+                    debug : debug_text,
                     windowCount : 0,
                     sha1 : "",
                     errwarn : "?"
@@ -438,6 +454,7 @@ function getEditorMasterHTML (files,title,theme) {
                     mtime : new Date(0),
                     theme : editor_theme,
                     mode : editor_mode,
+                    debug : debug_text,
                     windowCount : 0,
                     sha1 : "",
                     errwarn : ""
@@ -458,6 +475,8 @@ function getEditorMasterHTML (files,title,theme) {
         html.append({
             ws_prefix : ws_prefix,
             ace_single_file_edit_url : ace_single_file_edit_url,
+            ace_single_file_debug_url : ace_single_file_debug_url,
+            ace_single_file_serve_url : ace_single_file_serve_url,
             files : filesNow
         },"head");
 
@@ -576,7 +595,63 @@ function fileEditor(theme,file,app,append_html) {
 
     }
 
+    function getDebugJS (req,res){
+        fs.stat(file,function(err,stat){
+            if (!err && stat) {
+                /*
+                var html = debug_html.htmlGenerator();
+
+                html.append({
+                    ws_prefix    : ws_prefix,
+                    file         : file,
+                },"head");
+                */
+                res.send(debug_html.renderWithObject({file:file}));
+            } else {
+                res.send ("can't serve file "+file+". sorry."+(err?"\n"+err.message:""));
+            }
+
+        });
+    }
+    function getDebugMD (req,res){
+        fs.stat(file,function(err,stat){
+            if (!err && stat) {
+                fs.readFile(file,"utf8",function(err,text){
+                    if (!err && typeof text==='string') {
+
+                        var html = md2html(text).htmlGenerator();
+
+                        html.append({
+                            ws_prefix    : ws_prefix,
+                            file         : file,
+                        },"head");
+
+                        html.append(singleFileEditorBrowserCode);
+
+                        res.send(html.html);
+                    } else {
+                        res.send ("can't serve file "+file+". sorry."+(err?"\n"+err.message:""));
+                    }
+                });
+
+            } else {
+                res.send ("can't serve file "+file+". sorry."+(err?"\n"+err.message:""));
+            }
+        });
+    }
+
     app.get(ace_single_file_edit_url+file,getEditorHtml);
+
+    app.get(ace_single_file_debug_url+file,
+
+        file.endsWith('.js') ? getDebugJS :
+        file.endsWith('.md')||file.endsWith('.markdown')  ? getDebugMD : function(req,res) {
+            res.redirect(ace_single_file_serve_url+file);
+        });
+
+
+
+
     app.use(ace_single_file_serve_url,express.static(path.resolve(".")));
 
 

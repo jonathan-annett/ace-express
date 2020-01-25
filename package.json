@@ -8,12 +8,15 @@
     "description": "serve ace editor files from node-express",
     "license": "MIT",
     "dependencies": {
+        "@bonniernews/md2html": "0.0.8",
+        "@nodejs/repl": "github:nodejs/repl",
         "@zhike/remote-ip-express-middleware": "^1.1.1",
         "ace-builds": "^1.4.8",
         "body-parser": "^1.19.0",
         "express": "^4.17.1",
         "express-ws": "^4.0.0",
-        "jsextensions": "github:jonathan-annett/jsextensions#413270687ac961326c300e724798f8b0bcd4c055",
+        "jsextensions": "github:jonathan-annett/jsextensions#79c606fedf7e99fb29d9cdbe046013fc56e9a045",
+        "remove": "^0.1.5",
         "serve-favicon": "github:jonathan-annett/serve-favicon#612c1a1b6301dc4ab0512bd467a8239e81a2af04",
         "string-diff-regex": "github:jonathan-annett/string-diff-regex#1d031395aabb097c3e0450cfc487365dfd5c8051"
     },
