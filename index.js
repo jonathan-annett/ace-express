@@ -12,7 +12,7 @@ md2html                 = require('@bonniernews/md2html').render,
 ace_file                = require.resolve("ace-builds"),
 ace_editor_dir          = path.join(__dirname,"ace-public"),
 ace_editor_html_path    = path.join(__dirname,"ace-public","editor.html"),
-ace_editor_debug_path    = path.join(__dirname,"ace-public","debug.html"),
+ace_editor_debug_path   = path.join(__dirname,"ace-public","debug.html"),
 ace_editor_css_path     = path.join(__dirname,"ace-public","editor.css"),
 ace_directory_html_path = path.join(__dirname,"ace-public","editor_dir.html"),
 //ace_editor_js_path   = path.join(__dirname,"ace-public","editor.js"),
@@ -339,6 +339,11 @@ function getEditorMasterHTML (files,title,theme) {
     function loader() {
 
 
+        window.startFSJSZip("/jszip_test.zip",function(){
+            console.log(arguments);
+        });
+
+
         function editFile (file) {
             if (typeof file==='object' && file.target) {
                 if (file.preventDefault) file.preventDefault();
@@ -613,6 +618,7 @@ function fileEditor(theme,file,app,append_html) {
 
         });
     }
+
     function getDebugMD (req,res){
         fs.stat(file,function(err,stat){
             if (!err && stat) {
@@ -653,6 +659,12 @@ function fileEditor(theme,file,app,append_html) {
 
 
     app.use(ace_single_file_serve_url,express.static(path.resolve(".")));
+
+    app.use(
+        "/jszip_test.zip",
+        express.static(path.resolve("./node_modules/jsextensions/src/jszip_test.zip"))
+    );
+
 
 
 
@@ -958,9 +970,6 @@ function multiFileEditor(theme,files,port,append_html) {
         });
     });
 
-
-
-
     return Object.defineProperties( self,
         {
             files               : { value : editors, enumerable:true},
@@ -969,7 +978,6 @@ function multiFileEditor(theme,files,port,append_html) {
         }
     );
 }
-
 
 function nodeCLI(argv) {
 

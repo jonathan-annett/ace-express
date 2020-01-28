@@ -15,7 +15,7 @@
         "body-parser": "^1.19.0",
         "express": "^4.17.1",
         "express-ws": "^4.0.0",
-        "jsextensions": "github:jonathan-annett/jsextensions#e430b7b43d11be4b690810c3166f8724c9cf0686",
+        "jsextensions": "github:jonathan-annett/jsextensions#be2dd8652ceb99866085194536835705e74009a9",
         "remove": "^0.1.5",
         "serve-favicon": "github:jonathan-annett/serve-favicon#612c1a1b6301dc4ab0512bd467a8239e81a2af04",
         "string-diff-regex": "github:jonathan-annett/string-diff-regex#1d031395aabb097c3e0450cfc487365dfd5c8051"
