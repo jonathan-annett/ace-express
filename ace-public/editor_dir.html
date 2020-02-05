@@ -3,7 +3,7 @@
     <head>
         <title></title>
         <script src="/js/polyfills.min.js"></script>
-        <script src="/js/extensions.min.js"></script>
+        <script src="/js/jsextensions.js"></script>
     </head>
     <body>
         <table>
@@ -19,7 +19,7 @@
                 <th>&nbsp;</th>
             </tr>
             <tr class="template_row">
-                <td><a data-id="${id}" data-file="${file}" href="#">${file}</a></td>
+                <td><a data-id="${id}" data-file-edit="${file}" href="#">${file}</a></td>
                 <td id="dir_${id}_mtime">${mtime.toUTCString}</td>
                 <td id="dir_${id}_size">${size}</td>
                 <td id="dir_${id}_theme">${theme}</td>
@@ -28,7 +28,9 @@
                 <td id="dir_${id}_sha1">${sha1}</td>
                 <td id="dir_${id}_errwarn">${errwarn}</td>
                 <td>
-                    <button data-id="${id}" data-file="${file}">edit</button>
+                    <button data-id="${id}" data-file-edit="${file}">edit</button>
+                    <button data-id="${id}" data-file-debug="${file}">${debug}</button>
+                    <button data-id="${id}" data-file-serve="${file}">serve</button>
                 </td>
             </tr>
         </table>
