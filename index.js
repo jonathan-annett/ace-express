@@ -948,12 +948,14 @@ function multiFileEditor(theme,files,port,append_html) {
                         console.dir({closed:connected[ws.id]},{getters:true,colors:true,depth:null});
                         connected[ws.id].connected=false;
                         delete connected[ws.id];
+                        ids=Object.keys(connected);
                   });
 
                   ws.on('error', function(err) {
                         console.dir({error:err,ws:connected[ws.id]},{getters:true,colors:true,depth:null});
                         connected[ws.id].connected=false;
                         delete connected[ws.id];
+                        ids=Object.keys(connected);
                   });
 
             });
