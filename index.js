@@ -339,11 +339,6 @@ function getEditorMasterHTML (files,title,theme) {
     function loader() {
 
 
-        window.startFSJSZip("/jszip_test.zip",function(){
-            console.log(arguments);
-        });
-
-
         function editFile (file) {
             if (typeof file==='object' && file.target) {
                 if (file.preventDefault) file.preventDefault();
