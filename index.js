@@ -336,7 +336,7 @@ function debugButtonTextFromFilename(filename) {
 
 function getEditorMasterHTML (files,title,theme) {
 
-    function loader() {
+    function masterHTMLBrowserCode() {
 
 
         function editFile (file) {
@@ -484,7 +484,7 @@ function getEditorMasterHTML (files,title,theme) {
           ace_directory_html_template.renderWithObject(Object.values(filesNow)),
           "table");
 
-        html.append(loader,"body");
+        html.append(masterHTMLBrowserCode,"body");
         res.send(html.html);
     };
 }
@@ -732,7 +732,7 @@ function fileEditor(theme,file,app,append_html) {
         text : {
             set : function (value){
                 fileText.value = value;
-                fs.write(file,fileText.value,function(err){
+                fs.writeFile(file,fileText.value,function(err){
                     if (err) return console.log(err);
                     if (connects.length===0) return;
                     var payload = JSON.stringify({updated:fileText.value});
@@ -873,9 +873,6 @@ function multiFileEditor(theme,files,port,append_html) {
 
             app.get(ace_multi_file_dashboard_url,getEditorMasterHTML (files, "editing files",theme) );
 
-
-
-
             function wsId(randDigits,msecDigits) {
                 return ( Array(1+randDigits).join('z')+
                          Math.floor(Math.random()*Number.MAX_SAFE_INTEGER).toString(36)
@@ -902,15 +899,12 @@ function multiFileEditor(theme,files,port,append_html) {
 
             }
 
-
             wsIdAgeTest();
-
 
             app.use(function (req, res, next) {
                  req.ws_id =wsId(10,6);
                  return next();
             });
-
 
             app.ws(ws_prefix+"_index", function(ws,req) {
                   ws.id=req.ws_id;
