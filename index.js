@@ -841,7 +841,6 @@ function multiFileEditor(theme,files,port,append_html) {
                 editors[filename] = editor;
                 editor.on("change",function(){
                     var args = Function.args(arguments);
-                    console.log(args);
                     emit("change",[{file:editor.file,text:editor.text}]);
                     var msg={
                         file:    filename,
