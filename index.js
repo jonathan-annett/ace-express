@@ -891,10 +891,10 @@ function multiFileEditor(theme,files,port,append_html) {
                 setTimeout(function(id){
                     var age = wsAge(id);
                     console.log("wsIdAgeTest():",id,"is",age.toFixed(3),"seconds old");
-                    if (age < 1 || age > 1.050) {
+                    if (age < 1 || age > 1.100) {
                         throw new Error ("wsAge() self test failed");
                     }
-                },1000,wsId(10,6));
+                },1010,wsId(10,6));
 
             }
 
