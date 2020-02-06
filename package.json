@@ -15,10 +15,10 @@
         "body-parser": "^1.19.0",
         "express": "^4.17.1",
         "express-ws": "^4.0.0",
-        "jsextensions": "github:jonathan-annett/jsextensions#49fb5f83f9a14f7f8b7ad0b5b87e76a3e18501e5",
+        "jsextensions": "github:jonathan-annett/jsextensions#c8e3c03c03fa39c13fe17c31053bdc8ced01ab33",
         "remove": "^0.1.5",
         "serve-favicon": "github:jonathan-annett/serve-favicon#612c1a1b6301dc4ab0512bd467a8239e81a2af04",
-        "string-diff-regex": "github:jonathan-annett/string-diff-regex#e57ea8ce9c0a3a91e9047645985a988a7807c8a6"
+        "string-diff-regex": "github:jonathan-annett/string-diff-regex#7ad394bdde127071e1d3efe63d55b65f033b00c6"
     },
     "devDependencies": {},
     "scripts": {
