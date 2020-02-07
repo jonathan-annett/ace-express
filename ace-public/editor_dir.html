@@ -4,6 +4,7 @@
         <title></title>
         <script src="/js/polyfills.min.js"></script>
         <script src="/js/jsextensions.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.css">
     </head>
     <body>
         <table>
@@ -34,5 +35,63 @@
                 </td>
             </tr>
         </table>
+        
+        <ul class="menu">
+            <li id="menu_file_open" class="menu-item">
+                <a href="#" class="menu-btn">
+                    <i class="fa fa-folder-open"></i>
+                    <span class="menu-text">Open</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a id="menu_file_open_new" href="#" class="menu-btn">
+                    <i class="fa fa-external-link"></i>
+                    <span class="menu-text">Open in New Window</span>
+                </a>
+            </li>
+            <li class="menu-separator"></li>
+            <li id="menu_file_debug" class="menu-item">
+                <button type="button" class="menu-btn">
+                    <i class="fa fa-reply"></i>
+                    <span class="menu-text">Debug</span>
+                </button>
+            </li>
+            <li id="menu_file_serve" class="menu-item">
+                <button type="button" class="menu-btn">
+                    <i class="fa fa-star"></i>
+                    <span class="menu-text">Serve</span>
+                </button>
+            </li>
+            <li class="menu-separator"></li>
+            <li id="menu_file_copy" class="menu-item">
+                <button type="button" class="menu-btn">
+                    <i class="fa fa-download"></i>
+                    <span class="menu-text">Copy</span>
+                </button>
+            </li>
+            <li id="menu_file_rename" class="menu-item">
+                <button type="button" class="menu-btn">
+                    <i class="fa fa-edit"></i>
+                    <span class="menu-text">Rename</span>
+                </button>
+            </li>
+            <li id="menu_file_delete" class="menu-item">
+                <button type="button" class="menu-btn">
+                    <i class="fa fa-trash"></i>
+                    <span class="menu-text">Delete</span>
+                </button>
+            </li>
+        </ul>
+
+        <div class="panes-container">
+            <div class="left-pane file_tree" id="left-pane">
+                
+            </div>
+            <div class="panes-separator" id="panes-separator"></div>
+            <div class="right-pane" id="editor"></div>
+        </div>
+        
+        
+        <script src="src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
     </body>
 </html>

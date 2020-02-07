@@ -1,6 +1,6 @@
 # ace-express
 
-orignally just a wrapper around **ace-builds** and **express**, ace-express does two things.
+Orignally just a wrapper around **ace-builds** and **express**, ace-express does two things.
 
 1) lets you serve the [ace-builds](https://www.npmjs.com/package/ace-builds) files easily via express
 
