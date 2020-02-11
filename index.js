@@ -63,7 +63,7 @@ demos_index    = "<html><head></head><body>\n"+
                   }).join("<br>\n")+"\n</body></html>",
 
 //chromebooks do something funky with localhost under penguin/crostini, so help a coder out....
-hostname = require("get-localhost-hostname"),
+hostname = require("get-localhost-hostname");
 
 //nb this func is never invoked, it's just used to
 //hold the source that is injected into the html
