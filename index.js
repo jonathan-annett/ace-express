@@ -863,7 +863,7 @@ function fileEditor(theme,file,app,append_html) {
     connects=[],
     fileText;
     
-    function asyncSetup(options,cb){
+    function editorSetup(options,cb){
         
         fileText = stringDiffRegex.diffPump(fs.readFileSync(file,"utf8"),undefined,true);
         var
@@ -1080,11 +1080,11 @@ function fileEditor(theme,file,app,append_html) {
         cb();
     }
     
-    // defer reading of file and creating internal objects until browser actaully opens the file
+    // defer reading of file and creating internal objects until browser actually opens the file
     swizzleRoute(
         app,
         "get",ace_single_file_edit_url+file,
-        {asyncSetup:asyncSetup}
+        {setup:editorSetup}
     );
 
 

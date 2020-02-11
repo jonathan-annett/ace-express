@@ -1,8 +1,6 @@
 node_modules/
 package-lock.json
 .zedstate
-.jsextensions-repo.json
-.serve-favicon-repo.json
-.string-diff-regex-repo.json
+*-repo.json
 rollback.package.json
 
