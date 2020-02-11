@@ -63,22 +63,7 @@ demos_index    = "<html><head></head><body>\n"+
                   }).join("<br>\n")+"\n</body></html>",
 
 //chromebooks do something funky with localhost under penguin/crostini, so help a coder out....
-hostname = isChromebook() ? "penguin.termina.linux.test" : "localhost",
-ace = {};
-
-function isChromebook() {
-    var os = require("os");
-    if (os.hostname()==="penguin" && os.platform()==="linux") {
-        var run=require("child_process").execSync;
-        try {
-            var cmd = run ("which systemd-detect-virt").toString().trim();
-            return (run(cmd).toString().trim()==="lxc");
-        } catch (e) {
-
-        }
-    }
-    return false;
-}
+hostname = require("get-localhost-hostname"),
 
 //nb this func is never invoked, it's just used to
 //hold the source that is injected into the html
@@ -1487,5 +1472,6 @@ Object.defineProperties(ace,{
 module.exports = ace;
 
 if (process.mainModule===module && process.argv.length>2) {
+    console.log(new Error());
     nodeCLI(process.argv);
 }

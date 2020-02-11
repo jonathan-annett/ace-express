@@ -1,6 +1,6 @@
 
-.someclass{
-    font-family:monaco;
+#file_list_table {
+        display:none;
 }
 
 @media screen  /*file tree*/ {
