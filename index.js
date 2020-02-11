@@ -1132,15 +1132,18 @@ function singleFileEditor(theme,file,port,append_html) {
 
     app.use(ace_lib_base_url,express.static(ace_dir));
     app.use(ace_editor_base_url,express.static(ace_editor_dir));
-    //app.use(string_diff_src_url,express.static(string_diff_src_path));
+    
+    Function.startServer(app,function(){
 
-    var listener = app.listen(port||0, function() {
-        var url =  'http://'+hostname+':' + listener.address().port+ ace_single_file_open_url + "/"+file;
-        console.log('goto '+url);
-        child_process.spawn("xdg-open",[url]);
+        var listener = app.listen(port||0, function() {
+            var url =  'http://'+hostname+':' + listener.address().port+ ace_single_file_open_url + "/"+file;
+            console.log('goto '+url);
+            child_process.spawn("xdg-open",[url]);
+        });
+        
+        app.get(ace_single_file_open_url+"/"+file,getEditorMasterHTML ([file],file,theme));
+    
     });
-
-    app.get(ace_single_file_open_url+"/"+file,getEditorMasterHTML ([file],file,theme));
 
     return fileEditor(theme,file,app,append_html);
 }
@@ -1401,7 +1404,8 @@ function nodeCLI(argv) {
         if (ix>=2 && ix < argv.length-1 ) {
             return argv[ix+1];
         }
-        return 0;// use random port
+        
+        return process.env.ACE_EXPRESS_PORT || 0;// use random port
     }
 
     var filename = getFilename();
