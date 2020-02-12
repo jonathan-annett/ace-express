@@ -54,6 +54,9 @@ string_diff_src_path = require.resolve("string-diff-regex"),
 //string_diff_src_url  = "/lib/string-diff-regex.js",
 
 ws_prefix      = "/ws/",
+
+edited_http_prefix  = "/edited/",
+
 remote_ip      = require('@zhike/remote-ip-express-middleware'),
 
 demos_index    = "<html><head></head><body>\n"+
@@ -71,7 +74,7 @@ ace = {};
 // the "arguments" here are just for linting purposes
 // they exist as vars in the outer scope which this code is
 // injected into.
-function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_prefix){
+function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_prefix,edited_http_prefix){
     Function.load("string-diff-regex",function(stringDiffRegex){
         var
 
@@ -195,13 +198,23 @@ function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_
                         lastDiffHash=null;
                         document.title = file;
                         updating = false;
+                   } else {
+                       if (payload.file===file && typeof payload.renamed==='string') {
+                           file = payload.renamed;
+                           document.title = file;
+                       }
                    }
                }
 
             };
 
             ws.onclose = function() {
+                
+               window.close();
+               // if still open, it's not an external window opened via javascript, 
+               // so force document.location.reload() which closes the embedded page 
                document.location.reload();
+               
             };
 
             var updateWSPump = function (payload){
@@ -231,7 +244,7 @@ function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_
                 document.title = file + "+";
                 updating = true;
                 xhr = new XMLHttpRequest();   // new HttpRequest instance
-                xhr.open("POST", "/edited");
+                xhr.open("POST", edited_http_prefix+file);
                 xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
                 xhr.onload = function () {
                     var ok = JSON.parse(xhr.responseText).ok;
@@ -303,12 +316,18 @@ function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_
 
 
     });
+    
+    if (window.top===window) {
+        
+        document.documentElement.requestFullscreen();
+    }
 }
 
 function modeFromFilename(filename) {
     return {   ".css":"css",
                ".html":"html",
                ".json":"json",
+               ".sh":"sh",
                ".md" : "markdown",
                ".markdown" : "markdown"}
            [ filename.substr(filename.lastIndexOf(".")) ] || "javascript";
@@ -343,7 +362,24 @@ function getEditorMasterHTML (files,title,theme,append_html) {
     // and is converted to a string for injection prior to being returned.
     function masterHTMLBrowserCode() {
         
-        var file_index;
+        var 
+        menu_ws,
+        file_index;
+        
+        function confirmChecked(filename) {
+            var lookup = Object.values(file_index);
+            var index = lookup.indexOf(filename);
+            if (index<0) return filename;
+            Object.keys(file_index).forEach(function(k,ix){
+                var el = document.getElementById(k);
+                el.checked=ix===index;
+                var label = el.labels[0];
+                label.contentEditable = 'false';
+                label.onfocus = null;
+                label.onblur=null;
+            });
+            return filename;
+        }
         
         function setupSplitter() {
             
@@ -543,7 +579,7 @@ function getEditorMasterHTML (files,title,theme,append_html) {
         function editFile (file) {
             if (editFile.current === file) return;
             editFile.current=file;
-            document.getElementById("editor").innerHTML='<object type="text/html" data="'+ace_single_file_edit_url+resolveFile(file)+'"></object>'
+            document.getElementById("editor").innerHTML='<object type="text/html" data="'+ace_single_file_edit_url+confirmChecked(resolveFile(file))+'"></object>'
         }
 
         function openFile (file) {
@@ -556,6 +592,77 @@ function getEditorMasterHTML (files,title,theme,append_html) {
 
         function serveFile (file) {
             window.open(ace_single_file_serve_url+resolveFile(file),"_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
+        }
+        
+        function doRenameFile(oldname,newname) {
+            if (menu_ws && typeof menu_ws.send==='function') {
+                menu_ws.send(JSON.stringify({file:oldname,renamed:newname}));
+            }
+        }
+        
+        function renameFile(file) {
+            var filename = resolveFile(file);
+            var lookup = Object.values(file_index);
+            var index = lookup.indexOf(filename);
+            if (index<0) return ;
+            
+            var el=document.getElementById(Object.keys(file_index)[index]);
+            var label = el.labels[0];
+            label.contentEditable = 'true';
+            
+            function blurred() {
+                label.contentEditable = 'false';
+                label.onkeydown=null;
+                label.obblur=null;
+                if (label.textContent.trim()!==filename) {
+                    doRenameFile(filename,label.textContent.trim());
+                }
+            }
+            
+            label.onfocus = function() {
+                window.setTimeout(function() {
+                    var sel, range;
+                    if (window.getSelection && document.createRange) {
+                        range = document.createRange();
+                        range.selectNodeContents(label);
+                        sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    } else if (document.body.createTextRange) {
+                        range = document.body.createTextRange();
+                        range.moveToElementText(label);
+                        range.select();
+                    }
+                    label.onfocus=null;
+                    label.onblur=blurred;
+                }, 1);
+            };
+            
+            
+            label.onkeydown = function (e) {
+                 if (!e) {
+                    e = window.event;
+                }
+                var keyCode = e.which || e.keyCode,
+                    target = e.target || e.srcElement;
+            
+                if (keyCode === 13 && !e.shiftKey) {
+                    if (e.preventDefault) {
+                        e.preventDefault();
+                        label.blur();
+                    } else {
+                        e.returnValue = false;
+                    }
+                }
+            }
+            
+            setTimeout(function(){
+                label.blur();
+                setTimeout(function(){
+                    label.focus();
+                    
+                },1);
+            },1);
         }
         
         function sub(files, dir) {
@@ -658,6 +765,15 @@ function getEditorMasterHTML (files,title,theme,append_html) {
                 }
             },false);
             
+            
+            document.getElementById("menu_file_rename").addEventListener("mousedown",function(){
+                if (selectedMenuFile) {
+                    renameFile(selectedMenuFile);
+                }
+            },false);
+            
+            
+            
             function showMenu(x, y){
                 menu.style.left = x + 'px';
                 menu.style.top = y + 'px';
@@ -715,15 +831,14 @@ function getEditorMasterHTML (files,title,theme,append_html) {
             }
         );
 
-        var
-        ws = new WebSocket("ws://" + location.host + ws_prefix+"_index");
-        ws.onopen = function() {
+        menu_ws = new WebSocket("ws://" + location.host + ws_prefix+"_index");
+        menu_ws.onopen = function() {
 
            // Web Socket is connected, send data using send()
-          // ws.send('{"open":true}');
+           // menu_ws.send('{"open":true}');
         };
 
-        ws.onmessage = function (evt) {
+        menu_ws.onmessage = function (evt) {
            var payload = JSON.parse(evt.data);
 
            var file,
@@ -746,7 +861,7 @@ function getEditorMasterHTML (files,title,theme,append_html) {
            }
         };
 
-        ws.onclose = function() {
+        menu_ws.onclose = function() {
            //document.location.reload();
         };
 
@@ -809,6 +924,7 @@ function getEditorMasterHTML (files,title,theme,append_html) {
         // file sizes and sha1 hashses etc get updated in memory.
         html.append({
             ws_prefix : ws_prefix,
+            edited_http_prefix: edited_http_prefix,
             ace_single_file_edit_url : ace_single_file_edit_url,
             ace_single_file_debug_url : ace_single_file_debug_url,
             ace_single_file_serve_url : ace_single_file_serve_url,
@@ -852,49 +968,78 @@ function getEditorMasterHTML (files,title,theme,append_html) {
 function fileEditor(theme,file,app,append_html) {
 
     var
+    save_to_name=file,
     onchange,
     onclose,
     onopen,
     connects=[],
-    fileText;
+    changed,
+    fileText,
+    ok       = '{"ok":true}',
+    notOk    = '{"ok":false}';
+    
+    function rename(newName) {
+        if (newName===file|| typeof changed!=='function') return notOk;
+        save_to_name = newName;
+        changed(fileText.value);
+        
+        if (connects.length>0) {
+            var json = JSON.stringify ({renamed:newName,file:file});
+            console.log("sending",json,"to",connects.length,"connections");
+            connects.forEach(function(connect){
+                connect.send(json);
+            });
+
+        }
+    }
     
     function editorSetup(options,cb){
         
         fileText = stringDiffRegex.diffPump(fs.readFileSync(file,"utf8"),undefined,true);
+        
         var
-        updaters=[],
-        ok='{"ok":true}',
-        notOk='{"ok":false}';
-    
-        fileText.addEventListener("change",function(text){
-    
-            var tempFile = file+(Date.now().toString(36))+(Math.floor(Math.random()*4096).toString(36));
-    
-            fs.writeFile(tempFile,text,function(err){
-    
-               if (err) return ;
-    
-               fs.rename(tempFile,file,function(err){
-                    if (err) return ;
-    
-                    console.log("updated",file,text.length,"bytes");
-    
-                    if (connects.length>1) {
-                        var json = JSON.stringify ({updated:text});
-    
-                        connects.forEach(function(connect){
-                            //if (connect !== sender ) {
-                                connect.send(json);
-                            //}
-                        });
-    
-                    }
-    
-                    if (typeof onchange==='function') onchange(text,file);
-                });
-    
+        updaters = [];
+        
+        changed = function(text){
+            fs.stat(file,function(err,stat){
+                if (err) return ;
+                
+                var tempFile = file+(Date.now().toString(36))+(Math.floor(Math.random()*4096).toString(36));
+                fs.writeFile(tempFile,text,{mode:stat.mode},function(err){
+        
+                   if (err) return ;
+                   
+                   fs.rename(tempFile,save_to_name,function(err){
+                        if (err) return ;
+        
+                        console.log("updated",save_to_name,text.length,"bytes");
+        
+                        if (connects.length>1) {
+                            var json = JSON.stringify ({updated:text});
+        
+                            connects.forEach(function(connect){
+                                //if (connect !== sender ) {
+                                    connect.send(json);
+                                //}
+                            });
+                            
+        
+                        }
+                        if (save_to_name!==file) {
+                            var old=file;
+                            file=save_to_name;
+                            fs.unlink(old,function(){})   
+                        }
+        
+                        if (typeof onchange==='function') onchange(text,file);
+                    });
+        
+                });    
+                
             });
-        });
+        };
+    
+        fileText.addEventListener("change",changed);
     
         function fileWasEdited(payload,sender){
             if (payload.file===file && typeof payload.value==='string') {
@@ -906,6 +1051,7 @@ function fileEditor(theme,file,app,append_html) {
                     fileText.payload = payload;
                     sender.send('{"diffAck":"'+payload.diff[2]+'"}');
                 } else {
+                    console.log({payload});
                     sender.send(notOk);
                 }
             }
@@ -931,6 +1077,7 @@ function fileEditor(theme,file,app,append_html) {
     
                             html.append({
                                 ws_prefix    : ws_prefix,
+                                edited_http_prefix : edited_http_prefix,
                                 file         : file,
                                 file_text    : fileText.value,
                                 theme        : theme,
@@ -968,6 +1115,7 @@ function fileEditor(theme,file,app,append_html) {
     
                     html.append({
                         ws_prefix    : ws_prefix,
+                        edited_http_prefix:edited_http_prefix,
                         file         : file,
                     },"head");
                     *//*
@@ -988,8 +1136,9 @@ function fileEditor(theme,file,app,append_html) {
                             var html = md2html(text).htmlGenerator();
     
                             html.append({
-                                ws_prefix    : ws_prefix,
-                                file         : file,
+                                ws_prefix          : ws_prefix,
+                                edited_http_prefix : edited_http_prefix,
+                                file               : file,
                             },"head");
     
                             html.append(singleFileEditorBrowserCode);
@@ -1022,7 +1171,7 @@ function fileEditor(theme,file,app,append_html) {
         app.use(ace_single_file_serve_url,express.static(path.resolve(".")));
         */
     
-        app.post("/edited/"+file,editedCallback);
+        app.post(edited_http_prefix+file,editedCallback);
     
         app.ws(ws_prefix+file, function(ws) {
     
@@ -1064,7 +1213,6 @@ function fileEditor(theme,file,app,append_html) {
     
               });
     
-    
               fileText.addEventListener("diff",ws.updateDiff);
               updaters.push(ws);
               updaters = fileText.connections(updaters,'updateDiff');
@@ -1075,16 +1223,34 @@ function fileEditor(theme,file,app,append_html) {
         cb();
     }
     
+    function editorTeardown (options,cb) {
+        swizzleRoute.removeRoute(edited_http_prefix+file);
+        swizzleRoute.removeRoute(ws_prefix+file);
+        delete options.handler;
+        cb ();
+    }
+    
     // defer reading of file and creating internal objects until browser actually opens the file
     swizzleRoute(
         app,
         "get",ace_single_file_edit_url+file,
-        {setup:editorSetup}
+        {
+            setup      : editorSetup,
+            teardown   : editorTeardown,
+            permitUndo : true
+        }
     );
 
 
     return Object.defineProperties({},{
-        file : {value : file,enumerable : true,configurable: true },
+        file : { 
+            get : function(){ 
+                return file;
+            },
+            set : rename,
+            enumerable : true,
+            configurable: true 
+        },
         on : {
             value  : function (e,fn) {
                 if (typeof fn ==='function') {
@@ -1130,6 +1296,40 @@ function fileEditor(theme,file,app,append_html) {
   
   
 */
+
+function editor_CLI_KeyLoop(url) {
+    var readline = require('readline');
+    readline.emitKeypressEvents(process.stdin);
+    process.stdin.setRawMode(true);
+    
+    console.log('opening '+url);
+    child_process.spawn("xdg-open",[url]);
+    process.stdin.on('keypress', function (str, key) {
+            
+        switch (true) {
+            
+            case key.ctrl && key.name === 'c' : 
+            case key.ctrl && key.name === 'x' : 
+            case key.ctrl && key.name === 'q' : 
+            case !key.ctrl && key.name === 'escape' :     
+                return process.exit();
+                
+            case !key.ctrl && key.name==='space' :
+                console.log('opening '+url);
+                return child_process.spawn("xdg-open",[url]);
+                
+            default : 
+            
+            console.log("You pressed the "+str+" key");
+            console.log();
+            console.log(key);
+            console.log();
+                
+        }
+        
+    });
+}
+
 function singleFileEditor(theme,file,port,append_html) {
 
     var app = express();
@@ -1146,11 +1346,18 @@ function singleFileEditor(theme,file,port,append_html) {
 
         var listener = app.listen(port||0, function() {
             var url =  'http://'+hostname+':' + listener.address().port+ ace_single_file_open_url + "/"+file;
-            console.log('goto '+url);
-            child_process.spawn("xdg-open",[url]);
+            editor_CLI_KeyLoop(url);
         });
         
-        app.get(ace_single_file_open_url+"/"+file,getEditorMasterHTML ([file],file,theme,function(editFile,files){editFile(Object.keys(files)[0]);}));
+        app.get(
+                ace_single_file_open_url+"/"+file,
+                getEditorMasterHTML ([file],
+                    file,theme,
+                    function(editFile,files){
+                        editFile(Object.keys(files)[0]);
+                    }
+                )
+            );
     
     });
 
@@ -1158,7 +1365,9 @@ function singleFileEditor(theme,file,port,append_html) {
 }
 
 function multiFileEditor(theme,files,port,append_html) {
+
     var
+    
     self = {} ,
     
     /*simple event listeners logic begins*/
@@ -1210,7 +1419,7 @@ function multiFileEditor(theme,files,port,append_html) {
     //app.use(string_diff_src_url,express.static(string_diff_src_path));
 
     var editors = {};
-
+    
     Function.startServer(app,function(){
         var listener = app.listen(port||0, function() {
 
@@ -1252,7 +1461,18 @@ function multiFileEditor(theme,files,port,append_html) {
                 });
             });
 
-            app.get(ace_multi_file_dashboard_url,getEditorMasterHTML (files, "editing files",theme) );
+            app.get(
+                        ace_multi_file_dashboard_url,
+                        getEditorMasterHTML (
+                            files, 
+                            "editing files",
+                            theme,
+                            files.length>=1 ? 
+                            function(editFile,files){
+                                    editFile(Object.keys(files)[0]);
+                            } : undefined
+                        )
+                    );
 
             function wsId(randDigits,msecDigits) {
                 return ( Array(1+randDigits).join('z')+
@@ -1309,18 +1529,7 @@ function multiFileEditor(theme,files,port,append_html) {
                          
                       }},
                       connected : {value : true, writable: true, enumerable:true },
-                      onmsg : { value : function(fn) {
-                        ws.on('message', function(msg) {
-                            if (!this.connected) return;
-                            this.last_active = Date.now();
-                            try {
-                                console.log({recv:msg,id:ws.id});
-                                fn (JSON.parse(msg))
-                            } catch (e) {
-
-                            }
-                        });
-                      }}
+                       
                   });
                   ids=Object.keys(connected);
 
@@ -1339,12 +1548,36 @@ function multiFileEditor(theme,files,port,append_html) {
                         delete connected[ws.id];
                         ids=Object.keys(connected);
                   });
+                  
+                  
+                  ws.on('message', function(msg) {
+                      //if (!this.connected) return;
+                      //this.last_active = Date.now();
+                      try {
+                          console.log({recv:msg,id:ws.id});
+                          var cmd = JSON.parse(msg);
+                          
+                          if (cmd && typeof cmd.file==='string' && typeof cmd.renamed==='string') {
+                             var ed = editors[cmd.file];
+                             if (ed) {
+                                 ed.file=cmd.renamed;
+                                 delete editors[cmd.file];
+                                 editors[cmd.renamed]=ed;
+                                 
+                             }
+                          }
+                          //fn (JSON.parse(msg))
+                      } catch (e) {
+
+                      }
+                  });
 
             });
 
             var url =  'http://'+hostname+':' + listener.address().port+ace_multi_file_dashboard_url;
-            console.log('goto '+url);
-            child_process.spawn("xdg-open",[url]);
+            
+            editor_CLI_KeyLoop(url);
+            
 
         });
     });
@@ -1390,11 +1623,20 @@ function nodeCLI(argv) {
             ix ++;
             var
             dirname = argv[ix],
-            file_path_mapper = function(fn){return path.join(dirname,fn);};
+            file_path_mapper = function(fn){return path.join(dirname,fn);},
+            nm="node_modules",
+            not_hidden = function(fn){ return !fn.startsWith(".") && !fn.startsWith(nm+"/") && fn!==nm; };
 
             while (dirname) {
-                if (fs.existsSync(dirname)&& fs.statSync(dirname).isDirectory() ) {
-                        files=files.concat(fs.readdirSync(dirname,{recursive:true}).map(file_path_mapper))
+                
+                if (   not_hidden(dirname) &&  
+                       fs.existsSync(dirname) && 
+                       fs.statSync(dirname).isDirectory() ) {
+                        files=files.concat(
+                            fs.readdirSync(dirname,{recursive:true})
+                            .filter(not_hidden)
+                            .map(file_path_mapper)
+                        )
                     }
                 ix ++;
                 if (ix >= argv.length-1 ) return files;
@@ -1426,7 +1668,21 @@ function nodeCLI(argv) {
     var filename = getFilename();
     var files = getFilenames();
     if (filename && files.length===0) {
-        singleFileEditor(getTheme(),filename,getPort() );
+        var ed = singleFileEditor(getTheme(),filename,getPort() );
+        ed.on("open",function(file,ws,updaters){
+            console.log("opened:",file,"count:",updaters.length);
+        });
+        ed.on("close",function(file,updaters){
+            
+            console.log("closed:",file,"count:",updaters.length);
+            
+            if (updaters.length===0) {
+                process.exit(0);
+            }
+            
+        });
+        
+
     } else {
 
         if (filename && files.indexOf(filename)<0) {
@@ -1434,7 +1690,11 @@ function nodeCLI(argv) {
         }
 
         if (files.length>0) {
-            multiFileEditor(getTheme(),files,getPort() );
+            var eds = multiFileEditor(getTheme(),files,getPort() );
+            
+            eds.addEventListener("close",function(){
+                console.log("close",arguments);
+            });
         }
     }
 
@@ -1475,7 +1735,6 @@ Object.defineProperties(ace,{
     configurable:true,enumerable:true
 
    },
-
    editMulti : {
     value : multiFileEditor,
     configurable:true,enumerable:true
