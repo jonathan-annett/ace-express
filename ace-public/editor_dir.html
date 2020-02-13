@@ -7,46 +7,35 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.css">
     </head>
     <body>
-        <table id="file_list_table">
-            <tr>
-                <th>filename</th>
-                <th>date/time</th>
-                <th>size</th>
-                <th>theme</th>
-                <th>mode</th>
-                <th>editors</th>
-                <th>sha1</th>
-                <th>errors/warnings</th>
-                <th>&nbsp;</th>
-            </tr>
-            <tr class="template_row">
-                <td><a data-id="${id}" data-file-edit="${file}" href="#">${file}</a></td>
-                <td id="dir_${id}_mtime">${mtime.toUTCString}</td>
-                <td id="dir_${id}_size">${size}</td>
-                <td id="dir_${id}_theme">${theme}</td>
-                <td id="dir_${id}_mode">${mode}</td>
-                <td id="dir_${id}_windowCount">${windowCount}</td>
-                <td id="dir_${id}_sha1">${sha1}</td>
-                <td id="dir_${id}_errwarn">${errwarn}</td>
-                <td>
-                    <button data-id="${id}" data-file-edit="${file}">edit</button>
-                    <button data-id="${id}" data-file-debug="${file}">${debug}</button>
-                    <button data-id="${id}" data-file-serve="${file}">serve</button>
-                </td>
-            </tr>
-        </table>
-        
+        <script>
+            if (window.toolbar.visible) {
+                document.write('<button id="go">start editor...</button><!--');
+                var goBtn = document.getElementById("go");
+                goBtn.onclick=function (e) {
+                      e.preventDefault();
+                      window.open(window.location.href,"_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
+                      window.close();
+                };
+                goBtn.focus();
+            }
+        </script>
         <ul class="menu">
             <li id="menu_file_open" class="menu-item">
                 <a href="#" class="menu-btn">
                     <i class="fa fa-folder-open"></i>
-                    <span class="menu-text">Open</span>
+                    <span class="menu-text">Edit</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a id="menu_file_open_new" href="#" class="menu-btn">
                     <i class="fa fa-external-link"></i>
-                    <span class="menu-text">Open in New Window</span>
+                    <span class="menu-text" data-template="Open <b>${file}</b> in new window">Open <b>${file}</b> in new window</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a id="menu_file_open_new_full" href="#" class="menu-btn">
+                    <i class="fa fa-expand"></i>
+                    <span class="menu-text" data-template="Open <b>${file}</b> fullscreen">Open <b>${file}</b> fullscreen</span>
                 </a>
             </li>
             <li class="menu-separator"></li>

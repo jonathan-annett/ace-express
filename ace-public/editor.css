@@ -1,8 +1,4 @@
 
-#file_list_table {
-        display:none;
-}
-
 @media screen  /*file tree*/ {
     
 .file_tree {
@@ -124,7 +120,7 @@ body {
     
     .menu {
         position: absolute;
-        width: 200px;
+        width: 260px;
         padding: 2px;
         margin: 0;
         border: 1px solid #bbb;
