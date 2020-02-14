@@ -79,12 +79,66 @@ function encodeURIPath(f) {
     return f.split("/").map(encodeURIComponent).join("/");
 }
 
+function doc_browser_shorthand () {
+        
+    var doc      = document, 
+        docMeth  = function(m){return doc[m].bind(doc);},
+        docWrite = docMeth("write"),
+        getEl    = docMeth("getElementById"),
+        qrySel   = docMeth("querySelector"),
+        qryAll   = docMeth("querySelectorAll"),
+        docEl    = doc.documentElement;
+    
+}
+
+function fullscreen_launcher (
+   // set by doc_browser_shorthand ()
+    doc,docMeth,docWrite,getEl,qrySel,qryAll,docEl  
+) {
+
+    if (window.toolbar.visible) {
+        
+        docWrite('<div><div class="centered"><button class="launch_button" id="btnWindowed">in Window</button><button class="launch_button" id="btnFullScreen">FullScreen</button></div></div><!--');
+        
+        var 
+        fs_keydown=function(e){
+            if(e.key === "Escape") {
+                window.close();
+            }
+        },
+        launchBtn=function(id,suffix) {
+            var goBtn = getEl(id);
+            goBtn.onclick=function (e) {
+                  e.preventDefault();
+                  window.removeEventListener("keydown",fs_keydown);
+                  window.open(window.location.href+suffix,"_blank","scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
+                  window.close();
+            };
+            return goBtn;
+        };
+        
+        launchBtn("btnFullScreen","?fs=1");
+        launchBtn("btnWindowed","").focus(); 
+        
+        window.addEventListener("keydown",fs_keydown);
+        
+
+    } else {
+        docEl.classList.remove("startup");
+    }
+    
+}
+
+
 //nb this func is never invoked, it's just used to
 //hold the source that is injected into the html
 // the "arguments" here are just for linting purposes
 // they exist as vars in the outer scope which this code is
 // injected into.
-function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_prefix,edited_http_prefix){
+function singleFileEditorBrowserCode(
+    // set by doc_browser_shorthand ()
+    doc,docMeth,docWrite,getEl,qrySel,qryAll,docEl,
+    editor,file,file_text,editor_mode,theme,ws_prefix,edited_http_prefix){
     Function.load("string-diff-regex",function(stringDiffRegex){
         var
 
@@ -239,9 +293,9 @@ function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_
 
         updateProcErrorCheckWrap = function (msec,last_payload) {
             var payload = {
-                errors:document.querySelectorAll("#editor div .ace_error").length,
-                warnings:document.querySelectorAll("#editor div .ace_warning").length,
-                hints:document.querySelectorAll("#editor div .ace_hint").length
+                errors:qryAll("#editor div .ace_error").length,
+                warnings:qryAll("#editor div .ace_warning").length,
+                hints:qryAll("#editor div .ace_hint").length
             };
 
             if (timeout) clearTimeout(timeout);
@@ -282,13 +336,13 @@ function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_
     
     if (window.top===window && location.search.search(/(\?|&)fs=1(&|$)/)>=0) {
         // when started with ?fs=1, show fullscreen and close when user exits fullscreen
-        document.documentElement.addEventListener('fullscreenchange', function (event) {
+        docEl.addEventListener('fullscreenchange', function (event) {
           if (!document.fullscreenElement) {
               window.close();
           }
         });
         
-        document.documentElement.requestFullscreen();
+        docEl.requestFullscreen();
     } 
     
     function onContextMenu(e) {
@@ -309,46 +363,6 @@ function singleFileEditorBrowserCode(editor,file,file_text,editor_mode,theme,ws_
 
 }
 
-function fullscreen_launcher () {
-    
-    var doc      = document, 
-        docWrite = doc.write.bind(doc),
-        getEl    = doc.getElementById.bind(doc),
-        docEl    = doc.documentElement;
-    
-    if (window.toolbar.visible) {
-        
-        docWrite('<div><div class="centered"><button class="launch_button" id="btnWindowed">in Window</button><button class="launch_button" id="btnFullScreen">FullScreen</button></div></div><!--');
-        
-        var 
-        fs_keydown=function(e){
-            if(e.key === "Escape") {
-                window.close();
-            }
-        },
-        launchBtn=function(id,suffix) {
-            var goBtn = getEl(id);
-            goBtn.onclick=function (e) {
-                  e.preventDefault();
-                  window.removeEventListener("keydown",fs_keydown);
-                  window.open(window.location.href+suffix,"_blank","scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
-                  window.close();
-            };
-            return goBtn;
-        };
-        
-        launchBtn("btnFullScreen","?fs=1");
-        launchBtn("btnWindowed","").focus(); 
-        
-        window.addEventListener("keydown",fs_keydown);
-        
-
-    } else {
-        docEl.classList.remove("startup");
-    }
-    
-}
-
 function masterHTMLBrowserCode(
     // the code inside masterHTMLBrowserCode() is injected  into the html page
     // returned by the handler. it's in this scope purely for linting purposes
@@ -357,7 +371,7 @@ function masterHTMLBrowserCode(
     // it acts as a quasi repository
 
     //these 'vars' are declared elswhere
-    files,doc,getEl,default_theme
+    files,doc,getEl,docEl,qrySel,qryAll,default_theme
 ) {
   
     var 
@@ -365,7 +379,7 @@ function masterHTMLBrowserCode(
     menu,
     is_fs_menu = window.top===window && location.search.search(/(\?|&)fs=1(&|$)/)>=0;
   
-    document.documentElement.addEventListener('fullscreenchange', function (event) {
+    docEl.addEventListener('fullscreenchange', function (event) {
       if (!document.fullscreenElement) {
           
           var ed = getEl("editor");
@@ -375,12 +389,12 @@ function masterHTMLBrowserCode(
                  leftPane.style.display="block";
                  paneSep.style.display="block";
                  if (is_fs_menu) {
-                    document.documentElement.requestFullscreen(); 
+                    docEl.requestFullscreen(); 
                  }
              
              } else {
                  hideMenu();
-                 document.documentElement.requestFullscreen(); 
+                 docEl.requestFullscreen(); 
              }
           } else {
               if (is_fs_menu) {
@@ -393,10 +407,10 @@ function masterHTMLBrowserCode(
     if (is_fs_menu) {
 
         var 
-        banner = document.querySelector(".click_for_fullscreen"),
+        banner = qrySel(".click_for_fullscreen"),
         gofull = function (){
             window.removeEventListener('mousedown',gofull);    
-            document.documentElement.requestFullscreen(); 
+            docEl.requestFullscreen(); 
             banner.style.display="none";
         };
         window.addEventListener('mousedown',gofull);
@@ -408,7 +422,7 @@ function masterHTMLBrowserCode(
     menu_ws,
     file_index,
     leftPane,rightPane,paneSep,
-    file_tree= document.querySelector(".file_tree");
+    file_tree= qrySel(".file_tree");
     
     function getChecked(el,typ) {
         var chks = el.querySelectorAll('input[type='+(typ||"checkbox")+']'); 
@@ -456,7 +470,7 @@ function masterHTMLBrowserCode(
              * Howto
              * ============
              *
-             * getEl('my_target').sdrag();
+             * document.getElementById('my_target').sdrag();
              *
              * onDrag, onStop
              * -------------------
@@ -574,9 +588,9 @@ function masterHTMLBrowserCode(
             Element.prototype.sdrag = sdrag;
         })();
        
-       leftPane = getEl('left-pane');
+       leftPane  = getEl('left-pane');
        rightPane = getEl('editor');
-       paneSep = getEl('panes-separator');
+       paneSep   = getEl('panes-separator');
    
        // The script below constrains the target to move horizontally between a left and a right virtual boundaries.
        // - the left limit is positioned at 10% of the screen width
@@ -644,7 +658,7 @@ function masterHTMLBrowserCode(
     function editFile (file) {
         if (editFile.current === file) return;
         editFile.current=file;
-        document.getElementById("editor").innerHTML='<object type="text/html" data="'+ace_single_file_edit_url+encodeURIPath(confirmChecked(resolveFile(file)))+'"></object>';
+        getEl("editor").innerHTML='<object type="text/html" data="'+ace_single_file_edit_url+encodeURIPath(confirmChecked(resolveFile(file)))+'"></object>';
     }
     
     function windowOpen (prefix,file,suffix) {
@@ -693,7 +707,7 @@ function masterHTMLBrowserCode(
         
         var 
         keys  = Object.keys(file_index),
-        label = document.querySelector('label[for="'+keys[index]+'"]');
+        label = qrySel('label[for="'+keys[index]+'"]');
         
         if (editFile.current===filename) {
             confirmChecked(editFile.current);
@@ -978,7 +992,7 @@ function masterHTMLBrowserCode(
     
     function setupMenu () {
         
-        menu = document.querySelector('.menu');
+        menu = getEl('context_menu');
         
         var 
         
@@ -1046,7 +1060,7 @@ function masterHTMLBrowserCode(
                      var ed = getEl("editor").dataset.is_full=true;
                      leftPane.style.display="none";
                      paneSep.style.display="none";
-                     document.documentElement.requestFullscreen(); 
+                     docEl.requestFullscreen(); 
                  } 
             },
             menu_editor_exit_full : function() {
@@ -1062,14 +1076,14 @@ function masterHTMLBrowserCode(
 
         var 
         
-        contextMenuSeps = doc.querySelectorAll(".menu-separator"),
+        contextMenuSeps = qryAll(".menu-separator"),
         showEl=function(el){el.style.display="block";},
         hideEl=function(el){el.style.display="none";};
         
         function showFileMenu(e,inEditor) {
             var displayFile = selectedMenuFile.split("/").pop();
             menuIds.forEach(function(id) {
-                var span  = document.querySelector("#"+id+" span"),
+                var span  = qrySel("#"+id+" span"),
                 template = span.dataset.template;
                 if (template) {
                     span.innerHTML = template.split('${file}').join(displayFile);
@@ -1113,7 +1127,7 @@ function masterHTMLBrowserCode(
         function showDirMenu(e) {
             var displayDir = selectedMenuFile.split("/").pop();
             menuIds.forEach(function(id) {
-                var span  = document.querySelector("#"+id+" span"),
+                var span  = qrySel("#"+id+" span"),
                 template = span.dataset.template;
                 if (template) {
                     span.innerHTML = template.split('${dir}').join(displayDir);
@@ -1219,11 +1233,11 @@ function masterHTMLBrowserCode(
            ],
            update=function(id_prefix,k) {
              if (payload[k]) {
-                document.getElementById(id_prefix+k).innerHTML=(file[k]=payload[k]).toString();
+                getEl(id_prefix+k).innerHTML=(file[k]=payload[k]).toString();
              }
            },
            renameId=function(old_prefix,new_prefix,k) {
-                document.getElementById(old_prefix+k).id=new_prefix+k;
+                getEl(old_prefix+k).id=new_prefix+k;
            };
            
        if (payload.file && (file=files[payload.file]) ) {
@@ -1292,7 +1306,7 @@ function masterHTMLBrowserCode(
            if (payload.delete_file) {
                
                if (editFile.current === payload.delete_file) {
-                   document.getElementById("editor").innerHTML='';
+                   getEl("editor").innerHTML='';
                    delete editFile.current;
                }
                
@@ -1419,7 +1433,8 @@ function getEditorMasterHTML (files,title,theme,append_html) {
 
 
         
-        html.append(fullscreen_launcher,"body");
+        html.append(doc_browser_shorthand);
+        html.append(fullscreen_launcher);
         html.append("src-noconflict/ace.js","body");
 
         
@@ -1628,6 +1643,7 @@ function fileEditor(theme,file,app,append_html) {
         html.append ("/js/polyfills.min.js","head");
         html.append ("/js/extensions.min.js","head");
 
+        html.append(doc_browser_shorthand);
         html.append(singleFileEditorBrowserCode);
 
         if (append_html) {
