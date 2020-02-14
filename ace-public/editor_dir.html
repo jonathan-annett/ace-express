@@ -1,77 +1,96 @@
 <!doctype html>
-<html>
+<html class="startup">
     <head>
         <title></title>
         <script src="/js/polyfills.min.js"></script>
         <script src="/js/jsextensions.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.css">
     </head>
+    
     <body>
-        <script>
-            if (window.toolbar.visible) {
-                document.write('<button id="go">start editor...</button><!--');
-                var goBtn = document.getElementById("go");
-                goBtn.onclick=function (e) {
-                      e.preventDefault();
-                      window.open(window.location.href,"_blank", "scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
-                      window.close();
-                };
-                goBtn.focus();
-            }
-        </script>
         <ul class="menu">
-            <li id="menu_file_open" class="menu-item">
-                <a href="#" class="menu-btn">
+            <li id="menu_dir_expand" class="menu-item">
+                <button class="menu-btn">
                     <i class="fa fa-folder-open"></i>
-                    <span class="menu-text">Edit</span>
-                </a>
+                    <span class="menu-text" data-template="Show files in <b>${dir}</b>">Show files in <b>${dir}</b></span>
+                </button>
             </li>
-            <li class="menu-item">
-                <a id="menu_file_open_new" href="#" class="menu-btn">
+            <li id="menu_dir_collapse" class="menu-item">
+                <button class="menu-btn">
+                    <i class="fa fa-folder"></i>
+                    <span class="menu-text" data-template="Hide files in <b>${dir}</b>">Hide files in <b>${dir}</b></span>
+                </button>
+            </li>
+            <li id="menu_file_open" class="menu-item">
+                <button class="menu-btn">
+                    <i class="fa fa-folder-open"></i>
+                    <span class="menu-text" data-template="Edit <b>${file}</b> in this editor">Edit <b>${file}</b> in this editor</span>
+                </button>
+            </li>
+            <li id="menu_file_open_new" class="menu-item">
+                <button class="menu-btn">
                     <i class="fa fa-external-link"></i>
                     <span class="menu-text" data-template="Open <b>${file}</b> in new window">Open <b>${file}</b> in new window</span>
-                </a>
+                </button>
             </li>
-            <li class="menu-item">
-                <a id="menu_file_open_new_full" href="#" class="menu-btn">
+            <li id="menu_file_open_new_full" class="menu-item">
+                <a href="#" class="menu-btn">
                     <i class="fa fa-expand"></i>
                     <span class="menu-text" data-template="Open <b>${file}</b> fullscreen">Open <b>${file}</b> fullscreen</span>
                 </a>
+            </li>
+            <li id="menu_editor_enter_full" class="menu-item">
+                <a href="#" class="menu-btn">
+                    <i class="fa fa-expand"></i>
+                    <span class="menu-text">Enter Fullscreen</span>
+                </a>
+            </li>
+            <li id="menu_editor_exit_full" class="menu-item">
+                <a href="#" class="menu-btn">
+                    <i class="fa fa-expand"></i>
+                    <span class="menu-text">Exit Fullscreen</span>
+                </a>
+            </li>
+            <li class="menu-separator"></li>
+            <li id="menu_file_new" class="menu-item">
+                <button class="menu-btn">
+                    <i class="fa fa-plus"></i>
+                    <span class="menu-text">New File</span>
+                </button>
             </li>
             <li class="menu-separator"></li>
             <li id="menu_file_debug" class="menu-item">
                 <button type="button" class="menu-btn">
                     <i class="fa fa-reply"></i>
-                    <span class="menu-text">Debug</span>
+                    <span class="menu-text" data-template="Debug <b>${file}">Debug <b>${file}</b></span>
                 </button>
             </li>
             <li id="menu_file_serve" class="menu-item">
                 <button type="button" class="menu-btn">
                     <i class="fa fa-star"></i>
-                    <span class="menu-text">Serve</span>
+                    <span class="menu-text" data-template="Serve <b>${file}">Serve <b>${file}</b></span>
                 </button>
             </li>
             <li class="menu-separator"></li>
             <li id="menu_file_copy" class="menu-item">
                 <button type="button" class="menu-btn">
                     <i class="fa fa-download"></i>
-                    <span class="menu-text">Copy</span>
+                    <span class="menu-text" data-template="Copy <b>${file}">Copy <b>${file}</b></span>
                 </button>
             </li>
             <li id="menu_file_rename" class="menu-item">
                 <button type="button" class="menu-btn">
                     <i class="fa fa-edit"></i>
-                    <span class="menu-text">Rename</span>
+                    <span class="menu-text" data-template="Rename <b>${file}">Rename <b>${file}</b></span>
                 </button>
             </li>
             <li id="menu_file_delete" class="menu-item">
                 <button type="button" class="menu-btn">
                     <i class="fa fa-trash"></i>
-                    <span class="menu-text">Delete</span>
+                    <span class="menu-text" data-template="Delete <b>${file}">Delete <b>${file}</b></span>
                 </button>
             </li>
         </ul>
-
         <div class="panes-container">
             <div class="left-pane file_tree" id="left-pane">
                 
@@ -79,8 +98,10 @@
             <div class="panes-separator" id="panes-separator"></div>
             <div class="right-pane" id="editor"></div>
         </div>
-        
-        
-        <script src="src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+        <div class="click_for_fullscreen">
+            <div class="centered">
+                Click for fullscreen
+            </div>
+        </div>
     </body>
 </html>
