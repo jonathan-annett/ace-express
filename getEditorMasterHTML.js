@@ -1,3 +1,4 @@
+
 module.exports =  function(ace_directory_html,ace_editor_css_url,debugButtonTextFromFilename,editor_themes,editor_modes,ws_prefix,
 edited_http_prefix,ace_single_file_edit_url,ace_single_file_debug_url,ace_single_file_serve_url,ace_single_serve_dir_url,ace_single_serve_file_url,doc_browser_shorthand,ace_lib_base_url){
 
@@ -26,7 +27,6 @@ function getDatasetField(fld,target) {
     return getDatasetField(fld,target.parentElement);
 }
 
-
 function editorListHtml(array,noun){
     return array.map(function(name){
        return [ 
@@ -47,8 +47,6 @@ function editorThemesHtml(){
 function editorModesHtml(){
     return editorListHtml(editor_modes,"mode")
 }
-
-
 
 function setEditorThemeClick(ev) {
     
@@ -81,7 +79,6 @@ function setEditorThemeClick(ev) {
 
 }
 
-
 function setEditorModeClick(ev) {
     
     var els =  editor_modes.map(function(mode){
@@ -110,8 +107,6 @@ function setEditorModeClick(ev) {
     }
 
 }
-
-
 
 function getLinks(file_root,url_root) {
     var links={};
@@ -173,22 +168,39 @@ function fullscreen_launcher (
 
     if (window.toolbar.visible) {
         
-        docWrite('<div><div class="centered"><button class="launch_button" id="btnWindowed">in Window</button><button class="launch_button" id="btnFullScreen">FullScreen</button></div></div><!--');
+        docWrite([
+            '<div>',
+            '<div class="centered startup-title">ace-express</div>',
+            '<div class="centered startup-keys">Esc - cancel</div>',
+            '<div class="centered">',
+            '<button class="launch_button" id="btnWindowed">in Window</button>',
+            '&nbsp;<button class="launch_button" id="btnFullScreen">FullScreen</button>',
+            '</div></div><!--'].join(""));
         
         var 
+        fs_click = function (suffix,e) {
+             if(e)e.preventDefault();
+             window.removeEventListener("keydown",fs_keydown);
+             window.open(window.location.href+suffix,"_blank","scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
+             window.close();
+        },
         fs_keydown=function(e){
             if(e.key === "Escape") {
-                window.close();
+                return window.close();
             }
+            
+            if(e.key.toLowerCase() === "f") {
+                return fs_click("?fs=1");
+            }
+            
+            if(e.key.toLowerCase() === "w") {
+                return fs_click("");
+            }
+            
         },
         launchBtn=function(id,suffix) {
             var goBtn = getEl(id);
-            goBtn.onclick=function (e) {
-                  e.preventDefault();
-                  window.removeEventListener("keydown",fs_keydown);
-                  window.open(window.location.href+suffix,"_blank","scrollbars=1,fullscreen=yes,status=no,toolbar=no,menubar=no,location=no");
-                  window.close();
-            };
+            goBtn.onclick=fs_click.bind(goBtn,suffix);
             return goBtn;
         };
         
@@ -338,7 +350,6 @@ function masterHTMLBrowserCode(
                     return x===".."?"~~":x;
                 }).join("/");
     }
-    
     
     function activateEditor(file,cb,attempt,msec) {
         if (files[file].getEditor) {

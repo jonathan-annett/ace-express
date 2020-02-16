@@ -20,7 +20,6 @@ ace_directory_html_path = path.join(__dirname,"ace-public","editor_dir.html"),
 //ace_editor_js_path   = path.join(__dirname,"ace-public","editor.js"),
 
 
-
 ace_lib_base_url    = "/ace",
 ace_editor_base_url = "/ace/edit_",
 ace_editor_html_url = "/ace/edit_/editor.html",
@@ -213,7 +212,7 @@ function singleFileEditorBrowserCode(
         blockChanges=false,
         updating=false,
         
-        update_init_interval=1,
+        update_init_interval=100,
         update_busy_interval=10,
         update_check_interval=250,
         update_error_interval=5000,
@@ -390,9 +389,29 @@ function singleFileEditorBrowserCode(
                 timeout=setTimeout(updateProc,update_init_interval,payload);
             }
         };
+        
+        function configureWorker(e, session) {
+            if (session.getMode().$id == "ace/mode/javascript") {
+                if (session.$worker) {
+                   session.$worker.send("changeOptions",[ {undef: true,maxerr:10000}])
+                   // or
+    //               session.$worker.send("setOptions",[ {onevar: false, asi:true}])
+                } else {
+                    alert("no worker");
+                }
+                
+            } else {
+                 //alert("session.getMode().$id="+session.getMode().$id);
+            }
+        }
+        // after changing the session
+        editor.session.on("changeMode", configureWorker)
+
 
         editor.setTheme("ace/theme/"+(theme||"cobalt"));
         editor.session.setMode("ace/mode/"+(editor_mode||"javascript"));
+
+
 
         editor.setValue(file_text,-1);
         document.title=file;
@@ -865,532 +884,36 @@ var getEditorMasterHTML = require("./getEditorMasterHTML")(
     ace_lib_base_url);
 
 
-function singleFileEditor(theme,file,port,append_html) {
-
-    var app = express();
-    var expressWs = require('express-ws')(app);
-    var faExpress = require('font-awesome-express')(app);
-    
-    
-
-    app.use(remote_ip());
-    app.use(favicon());
-    app.use(require('body-parser').json());
-
-    app.use(ace_lib_base_url,express.static(ace_dir));
-    app.use(ace_editor_base_url,express.static(ace_editor_dir));
-    
-    Function.startServer(app,function(){
-        var url =  'http://'+hostname+':' + listener.address().port+ ace_single_file_open_url + "/"+encodeURIPath(file);
-        var listener = app.listen(port||0, function() {
-            editor_CLI_KeyLoop(url);
-        });
-        
-        app.get(
-                url,
-                getEditorMasterHTML ([file],
-                    file,
-                    theme,
-                    faExpress,
-                    function(editFile,files){
-                        editFile(Object.keys(files)[0]);
-                    }
-                )
-            );
-    
-    });
-
-    return fileEditor(theme,file,app,append_html);
-}
+var singleFileEditor = require("./singleFileEditor")(
+    ace_dir,
+    ace_editor_dir,
+    ace_lib_base_url,
+    ace_editor_base_url,
+    ace_single_file_open_url,
+    editor_CLI_KeyLoop,
+    encodeURIPath,
+    getEditorMasterHTML,
+    fileEditor
+);
 
 
+var multiFileEditor = require ("./multiFileEditor") (
+     ace_dir,
+     ace_editor_dir,
+     ace_lib_base_url,
+     ace_editor_base_url,
+     ace_multi_file_dashboard_url,
+     editor_CLI_KeyLoop,
+     ws_prefix,
+     getEditorMasterHTML,
+     fileEditor
+      
+);
 
-function multiFileEditor(theme,files,port,append_html) {
-
-    var
-    
-    self = {} ,
-    
-    /*simple event listeners logic begins*/
-    events={ change : [], close : [], open: [] },
-    emit=function(e,args){
-        var fns = events[e];
-        if ( Array.isArray(fns) ) {
-            fns.forEach(function(fn){
-                //if (typeof fn==='function') 
-                fn.apply(this,args);
-            });
-        }
-    },
-    addEventListener = function(e,fn) {
-        if (typeof fn==='function') {
-            var fns = events[e];
-            if ( Array.isArray(fns) ) {
-                fns.push(fn);
-            }
-        }
-    },
-    removeEventListener = function(e,fn) {
-
-        var fns = events[e];
-        if ( Array.isArray(fns) ) {
-
-            if (typeof fn==='function') {
-                fns.remove(fn);
-            } else {
-                if (fn===null) {
-                    fns.splice(0,fns.length);
-                }
-            }
-
-        }
-    };
-    /*simple event listeners logic ends*/
-    
-    var app = express();
-    var expressWs = require('express-ws')(app);
-    var faExpress = require('font-awesome-express')(app);
-
-    app.use(remote_ip());
-    app.use(favicon());
-    app.use(require('body-parser').json());
-
-    app.use(ace_lib_base_url,express.static(ace_dir));
-    app.use(ace_editor_base_url,express.static(ace_editor_dir));
-    //app.use(string_diff_src_url,express.static(string_diff_src_path));
-
-    var editors = {};
-    
-    
-
-    Function.startServer(app,function(){
-        var listener = app.listen(port||0, function() {
-
-            var 
-            
-            connected = {},
-            ids=[],
-            add_editor = function(file){
-                 var editor_theme = typeof file ==='string' ? theme : file.theme;
-                 var filename = typeof file ==='string' ? file : file.file;
-                 var editor = fileEditor(editor_theme,filename,app,append_html);
-                 editors[filename] = editor;
-                 editor.on("change",function(){
-                     var args = Function.args(arguments);
-                     emit("change",[{file:editor.file,text:editor.text}]);
-                     var msg={
-                         file:    editor.file,
-                         sha1:    editor.sha1,
-                         size:    editor.text.length,
-                         errors:  editor.errors,
-                         warnings: editor.warnings,
-                         hints:   editor.hints
-                     };
-                     ids.forEach(function(id){
-                         connected[id].send(msg);
-                     });
-                 });
-                 editor.on("open",function(x,ws,updaters){
-                     emit("open",[{file:editor.file,text:editor.text}]);
-                     var msg = {file:editor.file,windowCount:updaters.length};
-                     ids.forEach(function(id){
-                         connected[id].send(msg);
-                     });
-                 });
-                 editor.on("close",function(x,updaters){
-                     emit("close",[{file:editor.file}]);
-                     var msg = {file:editor.file,windowCount:updaters.length};
-                     ids.forEach(function(id){
-                         connected[id].send(msg);
-                     });
-                 });
-             };
-
-            files.forEach(add_editor);
-
-            app.get(
-                        ace_multi_file_dashboard_url,
-                        getEditorMasterHTML (
-                            files, 
-                            "editing files",
-                            theme,
-                            faExpress,
-                            files.length>=1 ? 
-                            function(editFile,files){
-                                    editFile(Object.keys(files)[0]);
-                            } : undefined
-                        )
-                    );
-
-            function wsId(randDigits,msecDigits) {
-                return ( Array(1+randDigits).join('z')+
-                         Math.floor(Math.random()*Number.MAX_SAFE_INTEGER).toString(36)
-                       ).substr(0-randDigits)+'-'+Date.now().toString(36).substr(0-msecDigits);
-            }
-
-            function wsAge(id) {
-                var when   = Date.now();
-                var ref    = when.toString(36);
-                var len    = id.length - id.indexOf('-') - 1;
-                var digits = id.replace(/.*-/,ref.substr(0,ref.length-len));
-                return (when - Number.parseInt(digits,36))/1000;
-            }
-
-        /*    
-           function wsIdAgeTest() {
-
-                setTimeout(function(id){
-                    var age = wsAge(id);
-                    console.log("wsIdAgeTest():",id,"is",age.toFixed(3),"seconds old");
-                    if (age < 1 || age > 1.100) {
-                        throw new Error ("wsAge() self test failed");
-                    }
-                },1010,wsId(10,6));
-
-            }
-
-           wsIdAgeTest();*/
-
-            app.use(function (req, res, next) {
-                 req.ws_id =wsId(10,6);
-                 return next();
-            });
-
-            app.ws(ws_prefix+"_index", function(ws,req) {
-                  ws.id=req.ws_id;
-
-                  connected[ws.id]=Object.defineProperties({},{
-                      age  : { get : wsAge.bind(this,ws.id),enumerable:true },
-                      last_active : {value : Date.now(), writable: true, enumerable:false },
-                      active : {get : function(){return (Date.now()-this.last_active)/1000;},enumerable:true },
-                      id   : {value : ws.id, writable: false, enumerable:true },
-                      send : {value : function(obj) {
-                          if (!this.connected) return;
-                          try {
-                            ws.send(JSON.stringify(obj));
-                            console.log({sent:obj,id:ws.id});
-                            this.last_active = Date.now();
-                          } catch (err) {
-                              console.log({error:err.message,id:ws.id});
-                             this.connected=false; 
-                          }
-                         
-                      }},
-                      connected : {value : true, writable: true, enumerable:true },
-                       
-                  });
-                  ids=Object.keys(connected);
-
-                  console.dir({connected:connected[ws.id]},{getters:true,colors:true,depth:null});
-
-                  ws.on('close', function() {
-                        console.dir({closed:connected[ws.id]},{getters:true,colors:true,depth:null});
-                        connected[ws.id].connected=false;
-                        delete connected[ws.id];
-                        ids=Object.keys(connected);
-                  });
-
-                  ws.on('error', function(err) {
-                        console.dir({error:err,ws:connected[ws.id]},{getters:true,colors:true,depth:null});
-                        connected[ws.id].connected=false;
-                        delete connected[ws.id];
-                        ids=Object.keys(connected);
-                  });
-                  
-                  ws.on('message', function(msg) {
-                      //if (!this.connected) return;
-                      //this.last_active = Date.now();
-                      try {
-                          console.log({recv:msg,id:ws.id});
-                          
-                          var cmd = JSON.parse(msg),ed;
-                          
-                          
-                          /*
-                          
-                           incoming file rename request from browser
-                          
-                          */
-                          if ( cmd && 
-                               typeof cmd.file==='string' && 
-                               typeof cmd.renamed==='string' &&
-                               (ed = editors[cmd.file])  
-                             ) {
-                                 
-                             ed.file=cmd.renamed;
-                             delete editors[cmd.file];
-                             editors[cmd.renamed]=ed;
-                             console.log("ping back:",msg);
-                             ws.send(msg);
-                         }
-                          
-                          
-                          /*
-                          
-                           incoming file copy request from browser
-                          
-                          */
-                          
-                          if (  cmd && 
-                                typeof cmd.file==='string' && 
-                                typeof cmd.copied==='string' &&
-                                (ed = editors[cmd.file]) 
-                                ) {
-                                    
-                             var copy = ed.loaded ?
-                             fs.writeFile.bind(fs,cmd.copied,ed.text) :
-                             fs.copyFile.bind(fs,cmd.file,cmd.copied) ;
-                             
-                             copy (function(){
-                                 add_editor(cmd.copied);
-                                 console.log("ping back:",msg);
-                                 ws.send(msg);
-                             });
-                             
-                             
-                          }
-                          
-                          
-                          /*
-                          
-                           incoming new filerequest from browser
-                          
-                          */
-                          
-                          if (cmd && typeof cmd.new_file==='string') {
-                              
-                              fs.writeFile(cmd.new_file,cmd.text||'',function(){
-                                 add_editor(cmd.new_file);
-                                 ws.send(msg);
-                              });
-                             
-                          }
-                          
-                          
-                          /*
-                          
-                           incoming file delete request from browser
-                          
-                          */
-                          
-                          if ( cmd && 
-                               typeof cmd.delete_file==='string'&&
-                               (ed = editors[cmd.delete_file]) 
-                             ) {
-                              
-                              ed.delete(function(err){
-                                  
-                                 if (err) console.log(err);
-                                 console.log("ping back:",msg);
-                                 
-                                 files.remove(cmd.delete_file);
-                                 
-                                 ws.send(msg);
-                                 
-                              });
-                             
-                          }
-                          
-                          
-                          
-                          /*
-                          
-                           incoming editor theme change from browser
-                          
-                          */
-                          
-                          if (  cmd && 
-                                typeof cmd.file==='string' && 
-                                typeof cmd.theme==='string' &&
-                                (ed = editors[cmd.file]) 
-                                ) {
-                                    
-                                // new editor windows for this file will have the updated theme
-                                ed.theme = cmd.theme;
-                                
-                                // confirm / notify other windows;
-                                ws.send(msg);
-                                
-                          }
-                          
-                          
-                          /*
-                          
-                           incoming editor theme change from browser
-                          
-                          */
-                          
-                          if (  cmd && 
-                                typeof cmd.default_theme==='string' 
-                             ) {
-                                    
-                                // new editor windows for this file will have the updated theme
-                                
-                                console.log("updated:",theme,'--->',cmd.default_theme);
-                                theme = cmd.default_theme;
-                                
-                                
-                                // confirm / notify other windows;
-                                ws.send(msg);
-                                
-                          }
-                          
-                          
-                          
-                          
-                          
-                          
-                          
-                          /*
-                          
-                           incoming editor mode change from browser
-                          
-                          */
-                          
-                          if (  cmd && 
-                                typeof cmd.file==='string' && 
-                                typeof cmd.editor_mode==='string' &&
-                                (ed = editors[cmd.file]) 
-                                ) {
-                                    
-                                // new editor windows for this file will have the updated mode
-                                ed.editor_mode = cmd.editor_mode;
-                                
-                                // confirm / notify other windows;
-                                ws.send(msg);
-                                
-                          }
-                          
-                          
-                          /*
-                          
-                           incoming editor serve / unserve from browser
-                          
-                          */
-                          
-                          if (  cmd && 
-                                typeof cmd.file==='string' && 
-                                typeof cmd.serve==='boolean' &&
-                                (ed = editors[cmd.file]) 
-                                ) {
-                                    
-                                    
-                                if (cmd.serve) {
-                                    ed.serve();
-                                } else {
-                                    ed.unserve();
-                                }
-                                // confirm / notify other windows;
-                                ws.send(msg);
-                                
-                          }
-                          
-                          
-                          
-                          
-                          //fn (JSON.parse(msg))
-                      } catch (e) {
-                        console.log({ouch:e});
-                      }
-                  });
-
-            });
-
-            var url =  'http://'+hostname+':' + listener.address().port+ace_multi_file_dashboard_url;
-            
-            editor_CLI_KeyLoop(url);
-            
-
-        });
-    });
-
-    return Object.defineProperties(self,{
-        files               : { value : editors, enumerable:true},
-        addEventListener    : { value : addEventListener , enumerable:true} ,
-        removeEventListener : { value : removeEventListener, enumerable:true},
-    });
-}
-
-function nodeCLI(argv) {
-
-    function getFilenames() {
-        var files = [];
-        var ix = argv.indexOf("--files");
-        if (ix>=2 && ix < argv.length-1 ) {
-            ix ++;
-            var filename = argv[ix];
-
-            while (filename) {
-                if (fs.existsSync(filename)) files.push(filename);
-                ix ++;
-                if (ix >= argv.length ) break;
-                filename = argv[ix];
-                if (filename.startsWith('--')) break;
-            }
-
-        }
-
-        ix = argv.indexOf("--dirs");
-        if (ix>=2 && ix < argv.length-1 ) {
-            ix ++;
-            var
-            dirname = argv[ix],
-            file_path_mapper = function(fn){return path.join(dirname,fn);},
-            nm="node_modules",
-            not_hidden = function(fn){ 
-                if ( fn.startsWith("./") || fn.startsWith("../") ) return true;  
-                return !fn.startsWith(".") &&  !fn.startsWith(nm+"/") && fn!==nm; 
-                
-            };
-
-            while (dirname) {
-                
-                if (   not_hidden(dirname) &&  
-                       fs.existsSync(dirname) && 
-                       fs.statSync(dirname).isDirectory() ) {
-                        files=files.concat(
-                            fs.readdirSync(dirname,{recursive:true})
-                            .filter(not_hidden)
-                            .map(file_path_mapper)
-                        );
-                    }
-                ix ++;
-                if (ix >= argv.length ) return files;
-                dirname = argv[ix];
-                if (dirname.startsWith('--')) return files;
-            }
-
-        }
-        return files;
-    }
-
-    function getTheme() {
-        var ix = argv.indexOf("--theme");
-        if (ix>=2 && ix < argv.length-1 ) {
-            return argv[ix+1];
-        }
-        return "dawn";
-    }
-
-    function getPort() {
-        var ix = argv.indexOf("--port");
-        if (ix>=2 && ix < argv.length-1 ) {
-            return argv[ix+1];
-        }
-        
-        return process.env.ACE_EXPRESS_PORT || 0;// use random port
-    }
-
-    var files = getFilenames();
-    if (files.length>0) {
-        var eds = multiFileEditor(getTheme(),files,getPort() );
-        
-        eds.addEventListener("close",function(){
-            console.log("close",arguments);
-        });
-    }
-
-}
+var nodeCLI = require("./nodeCLI")(
+    singleFileEditor,
+    multiFileEditor
+);
 
 Object.defineProperties(acelib,{
    express : {
@@ -1411,7 +934,7 @@ Object.defineProperties(acelib,{
     value : function (theme,port) {
         demo_html=theme? demo_html_raw.split('ace/theme/twilight').join('ace/theme/'+theme) : demo_html_raw;
         var app;
-        ace.express(app=express());
+        acelib.express(app=express());
         var listener = app.listen(port||3000, function() {
             var url =  'http://'+hostname+':' + listener.address().port+ace_lib_base_url+"/editor.html";
             console.log('goto '+url);
@@ -1437,7 +960,7 @@ Object.defineProperties(acelib,{
         configurable:true,enumerable:true
 
   }
-
+  
 });
 
 module.exports = acelib;
