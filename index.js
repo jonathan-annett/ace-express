@@ -3525,16 +3525,6 @@ function multiFileEditor(theme,files,port,append_html) {
 
 function nodeCLI(argv) {
 
-    function getFilename() {
-        var ix = argv.indexOf("--edit");
-        if (ix>=2 && ix < argv.length-1 ) {
-            var filename = argv[ix+1];
-            if (fs.existsSync(filename)) {
-                return filename;
-            }
-        }
-    }
-
     function getFilenames() {
         var files = [];
         var ix = argv.indexOf("--files");
@@ -3545,9 +3535,9 @@ function nodeCLI(argv) {
             while (filename) {
                 if (fs.existsSync(filename)) files.push(filename);
                 ix ++;
-                if (ix >= argv.length ) return files;
+                if (ix >= argv.length ) break;
                 filename = argv[ix];
-                if (filename.startsWith('--')) return files;
+                if (filename.startsWith('--')) break;
             }
 
         }
@@ -3573,7 +3563,7 @@ function nodeCLI(argv) {
                         );
                     }
                 ix ++;
-                if (ix >= argv.length-1 ) return files;
+                if (ix >= argv.length ) return files;
                 dirname = argv[ix];
                 if (dirname.startsWith('--')) return files;
             }
@@ -3599,37 +3589,13 @@ function nodeCLI(argv) {
         return process.env.ACE_EXPRESS_PORT || 0;// use random port
     }
 
-    var filename = getFilename();
     var files = getFilenames();
-    if (filename && files.length===0) {
-        var ed = singleFileEditor(getTheme(),filename,getPort() );
-        ed.on("open",function(file,ws,updaters){
-            console.log("opened:",file,"count:",updaters.length);
-        });
-        ed.on("close",function(file,updaters){
-            
-            console.log("closed:",file,"count:",updaters.length);
-            
-            if (updaters.length===0) {
-                process.exit(0);
-            }
-            
-        });
+    if (files.length>0) {
+        var eds = multiFileEditor(getTheme(),files,getPort() );
         
-
-    } else {
-
-        if (filename && files.indexOf(filename)<0) {
-            files[ process.argv.indexOf("--edit") < process.argv.indexOf("--files")  ? 'unshift' : 'push'](filename);
-        }
-
-        if (files.length>0) {
-            var eds = multiFileEditor(getTheme(),files,getPort() );
-            
-            eds.addEventListener("close",function(){
-                console.log("close",arguments);
-            });
-        }
+        eds.addEventListener("close",function(){
+            console.log("close",arguments);
+        });
     }
 
 }
