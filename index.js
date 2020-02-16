@@ -37,7 +37,15 @@ ace_multi_file_dashboard_url = "/ace/edit",
 
 ace_directory_html= String.load(ace_directory_html_path),
 
-ace_dir         = path.join(path.dirname(ace_file),".."),
+ace_dir         = path.join(path.dirname(ace_file),".."),/*;
+try {
+    require("ace-builds");
+} catch(e) {
+    
+}
+var
+ace_modelist    = require(path.join(ace_dir,"src-noconflict","ext-modelist.js")),     
+*/
 get_editor_files = function(regex) {
     return fs.readdirSync(path.join(ace_dir,"src"))
     .filter(function(fn){
@@ -72,7 +80,7 @@ demos_index    = "<html><head></head><body>\n"+
 
 //chromebooks do something funky with localhost under penguin/crostini, so help a coder out....
 hostname = require("get-localhost-hostname"),
-ace = {};
+acelib = {};
 
 
 
@@ -170,7 +178,11 @@ function setEditorModeClick(ev) {
 
 
 function encodeURIPath(f) {
-    return f.split("/").map(encodeURIComponent).join("/");
+    return (f.replace(/^\.\//,'')).split("/")
+        .map(encodeURIComponent)
+            .map(function (x){
+                return x===".."?"~~":x;
+            }).join("/");
 }
 
 function doc_browser_shorthand () {
@@ -232,7 +244,7 @@ function fullscreen_launcher (
 function singleFileEditorBrowserCode(
     // set by doc_browser_shorthand ()
     doc,docMeth,docWrite,getEl,qrySel,qryAll,docEl,
-    editor,file,file_text,editor_mode,theme,ws_prefix,edited_http_prefix){
+    editor,file,file_uri,file_text,editor_mode,theme,ws_prefix,edited_http_prefix){
     Function.load("string-diff-regex",function(stringDiffRegex){
         var
 
@@ -262,7 +274,7 @@ function singleFileEditorBrowserCode(
             fileText,
 
             wsBusy=false,
-            ws = new WebSocket("ws://" + location.host + ws_prefix+file);
+            ws = new WebSocket("ws://" + location.host + ws_prefix+file_uri);
 
             var
             lastDiffHash,
@@ -856,16 +868,22 @@ function masterHTMLBrowserCode(
     }
     
     function encodeURIPath(f) {
-        return f.split("/").map(encodeURIComponent).join("/");
+        return (f.replace(/^\.\//,'')).split("/")
+            .map(encodeURIComponent)
+                .map(function (x){
+                    return x===".."?"~~":x;
+                }).join("/");
     }
     
-    function activateEditor(file,attempt,msec) {
+    
+    function activateEditor(file,cb,attempt,msec) {
         if (files[file].getEditor) {
             files[file].getEditor().focus();
+            if (typeof cb === 'function') cb();
         } else {
             if (!attempt|| attempt < 5) {
                 msec=msec||250;
-                setTimeout(activateEditor,msec,file,(attempt||0)+1,msec*2);
+                setTimeout(activateEditor,msec,file,cb,(attempt||0)+1,msec*2);
             }
         }
     }
@@ -911,7 +929,10 @@ function masterHTMLBrowserCode(
                     el.labels[0].classList.add("file_open");
                 }
                 
-                activateEditor(file);
+                
+                activateEditor(file,function(){
+                    setFileEditorMode(editFile.current,files[editFile.current].mode);
+                });
 
             }
         }
@@ -1221,6 +1242,12 @@ function masterHTMLBrowserCode(
             } else {
                 
             }
+        });
+    }
+    
+    function set_editor_modes (files) {
+        Object.values(files).forEach(function(file){
+            file.mode = modeFromFilename(file.file).name;
         });
     }
     
@@ -2299,7 +2326,6 @@ function masterHTMLBrowserCode(
                        case  "editor" :
                           menuEl.querySelector("span.menu-text").innerHTML = "Change Editor Mode";
                           return true;
-                          break;
                        case "theme": 
                           return true;
                        default:
@@ -2472,6 +2498,8 @@ function masterHTMLBrowserCode(
         
     }
     
+    set_editor_modes (files);
+    
     file_index = loadfiles(file_tree, Object.keys(files));
     
     setupSplitter();
@@ -2618,14 +2646,6 @@ function masterHTMLBrowserCode(
 
 }
 
-function modeFromFilename(filename) {
-    return { ".css" : "css",
-             ".html": "html",
-             ".json": "json",
-             ".sh"  : "sh",
-             ".md"  : "markdown",
-             ".markdown" : "markdown" }[ filename.substr(filename.lastIndexOf(".")) ] || "javascript";
-}
 
 function debugButtonTextFromFilename(filename) {
     return {   ".html"     : "view",
@@ -2656,7 +2676,7 @@ function getEditorMasterHTML (files,title,theme,faExpress,append_html) {
         files.forEach(function(file){
             var filename = typeof file ==='string' ? file : file.file;
             var editor_theme = typeof file ==='string' ? theme : file.theme;
-            var editor_mode  = modeFromFilename(filename);
+            var editor_mode  = "text";//modeFromFilename(filename);
             var debug_text   = debugButtonTextFromFilename(filename);
             var stats = fs.statSync(path.resolve(filename));
 
@@ -2724,14 +2744,18 @@ function getEditorMasterHTML (files,title,theme,faExpress,append_html) {
             ace_single_file_serve_url : ace_single_file_serve_url,
             getLinks                  : getLinks,
             files                     : filesNow,
-            modeFromFilename          : modeFromFilename
+            modeFromFilename          : function modeFromFilename(filename) {
+                                            return ace.require("ace/ext/modelist").getModeForPath(filename);
+                                        }
         },"head");
 
 
         
         html.append(doc_browser_shorthand);
         html.append(fullscreen_launcher);
-        html.append("src-noconflict/ace.js","body");
+        html.append(ace_lib_base_url+"/src-noconflict/ace.js","body");
+        html.append(ace_lib_base_url+"/src-noconflict/ext-modelist.js","body");
+
 
         
         html.append(masterHTMLBrowserCode,"body");
@@ -2826,9 +2850,9 @@ function fileEditor(theme,file,app,append_html) {
             });
             
             // for new inplace clones, move the routes to the new name
-            swizzleRoute.removeRoute(app,edited_http_prefix+file);
-            swizzleRoute.removeRoute(app,ws_prefix+file);
-            swizzleRoute.removeRoute(app,ace_single_file_edit_url+file);
+            swizzleRoute.removeRoute(app,edited_http_prefix+file_uri);
+            swizzleRoute.removeRoute(app,ws_prefix+file_uri);
+            swizzleRoute.removeRoute(app,ace_single_file_edit_url+file_uri);
             
             app.post(edited_http_prefix+newName,editViaHTTPPost);
             app.ws(ws_prefix+newName,onNewWebSocket);
@@ -2861,10 +2885,10 @@ function fileEditor(theme,file,app,append_html) {
     }
     
     function set_editor_mode(value) { 
-        editor_mode = value;
+        //editor_mode = value;
         
         if (connects.length>0) {
-            var json = JSON.stringify ({file:file, editor_mode:editor_mode});
+            var json = JSON.stringify ({file:file, editor_mode:value});
             console.log("sending",json,"to",connects.length,"connections");
             connects.forEach(function(connect){
                 connect.send(json);
@@ -2946,8 +2970,9 @@ function fileEditor(theme,file,app,append_html) {
     function getEditorHtml(req,res) {
 
         var html = edit_html.htmlGenerator();
-
-        html.replace('src-noconflict/ace.js',ace_lib_base_url+'/src-min-noconflict/ace.js');
+        
+        
+        //html.replace('src-noconflict/ace.js',ace_lib_base_url+'/src-min-noconflict/ace.js');
 
         html.replace(new RegExp("(?<=<pre id=.*>).*(?=<\/pre>)","gs"),'');
 
@@ -2955,10 +2980,15 @@ function fileEditor(theme,file,app,append_html) {
             ws_prefix     : ws_prefix,
             edited_http_prefix : edited_http_prefix,
             file          : file,
+            file_uri      : file_uri,
             file_text     : fileText.value,
             theme         : theme,
-            editor_mode   : modeFromFilename(file),
+            editor_mode   : 'text',//modeFromFilename(file),
         },"head");
+        
+        html.append(ace_lib_base_url+"/src-noconflict/ace.js","body");
+        html.append(ace_lib_base_url+"/src-noconflict/ext-modelist.js","body");
+
 
         html.append ("/js/polyfills.min.js","head");
         html.append ("/js/extensions.min.js","head");
@@ -3549,7 +3579,11 @@ function nodeCLI(argv) {
             dirname = argv[ix],
             file_path_mapper = function(fn){return path.join(dirname,fn);},
             nm="node_modules",
-            not_hidden = function(fn){ return !fn.startsWith(".") && !fn.startsWith(nm+"/") && fn!==nm; };
+            not_hidden = function(fn){ 
+                if ( fn.startsWith("./") || fn.startsWith("../") ) return true;  
+                return !fn.startsWith(".") &&  !fn.startsWith(nm+"/") && fn!==nm; 
+                
+            };
 
             while (dirname) {
                 
@@ -3600,7 +3634,7 @@ function nodeCLI(argv) {
 
 }
 
-Object.defineProperties(ace,{
+Object.defineProperties(acelib,{
    express : {
        value : function (app) {
            app.use(favicon());
@@ -3648,7 +3682,7 @@ Object.defineProperties(ace,{
 
 });
 
-module.exports = ace;
+module.exports = acelib;
 
 if (process.mainModule===module && process.argv.length>2) {
     nodeCLI(process.argv);
