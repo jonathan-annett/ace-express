@@ -63,14 +63,28 @@
   background-position: top -18px left 6px;
 }
 
-    
+.file_tree label i {
+    color:silver;
+    float:right;
+}
+
 .file_tree label span.show_theme {
     color:#666666;
 }
 
+
 .file_tree label.file_open span.show_theme {
     color:#f7a115;
 }
+
+.file_tree label.file_serving   i.serve_btn{
+    color: red;
+}
+                                            
+.file_tree label.file_open  i.close_btn {
+    color: lime;
+}
+
         
 
 body {
