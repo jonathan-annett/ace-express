@@ -37,15 +37,7 @@ ace_multi_file_dashboard_url = "/ace/edit",
 
 ace_directory_html= String.load(ace_directory_html_path),
 
-ace_dir         = path.join(path.dirname(ace_file),".."),/*;
-try {
-    require("ace-builds");
-} catch(e) {
-    
-}
-var
-ace_modelist    = require(path.join(ace_dir,"src-noconflict","ext-modelist.js")),     
-*/
+ace_dir         = path.join(path.dirname(ace_file),".."),
 get_editor_files = function(regex) {
     return fs.readdirSync(path.join(ace_dir,"src"))
     .filter(function(fn){
@@ -2983,7 +2975,7 @@ function fileEditor(theme,file,app,append_html) {
             file_uri      : file_uri,
             file_text     : fileText.value,
             theme         : theme,
-            editor_mode   : 'text',//modeFromFilename(file),
+            editor_mode   : 'text',// default to text until browser is loaded
         },"head");
         
         html.append(ace_lib_base_url+"/src-noconflict/ace.js","body");
