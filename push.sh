@@ -8,9 +8,9 @@ if [[ "${NEW_REPOS}" == "1" ]]; then
 fi
 git add index.js
 if [[ "$1" == "" ]];then
- git commit -m "auto updated"
+  git commit -m "auto updated"
 else
- git commit
+  git commit
 fi
 git push
 git rev-parse HEAD
