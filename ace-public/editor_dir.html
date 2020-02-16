@@ -4,27 +4,45 @@
         <title></title>
         <script src="/js/polyfills.min.js"></script>
         <script src="/js/jsextensions.js"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.css">
     </head>
     
     <body>
-        <ul class="menu">
+        <ul id="context_menu" class="menu">
             <li id="menu_dir_expand" class="menu-item">
                 <button class="menu-btn">
                     <i class="fa fa-folder-open"></i>
-                    <span class="menu-text" data-template="Show files in <b>${dir}</b>">Show files in <b>${dir}</b></span>
+                    <span class="menu-text" data-template="Show files in <b>${file}</b>">Show files in <b>${file}</b></span>
                 </button>
             </li>
             <li id="menu_dir_collapse" class="menu-item">
                 <button class="menu-btn">
                     <i class="fa fa-folder"></i>
-                    <span class="menu-text" data-template="Hide files in <b>${dir}</b>">Hide files in <b>${dir}</b></span>
+                    <span class="menu-text" data-template="Hide files in <b>${file}</b>">Hide files in <b>${file}</b></span>
                 </button>
             </li>
+            <li id="menu_file_theme" class="menu-item">
+                <button type="button" class="menu-btn">
+                    <i class="fa fa-tint"></i>
+                    <span class="menu-text" data-template="Open <b>${file}</b> (select a theme)">Open <b>${file}</b> (select a theme)</span>
+                </button>
+            </li>
+            <li id="menu_file_mode" class="menu-item">
+                <button type="button" class="menu-btn">
+                    <i class="fa fa-tint"></i>
+                    <span class="menu-text" data-template="Open <b>${file}</b> (select an editor mode)">Open <b>${file}</b> (select an editor mode)</span>
+                </button>
+            </li>
+
             <li id="menu_file_open" class="menu-item">
                 <button class="menu-btn">
                     <i class="fa fa-folder-open"></i>
                     <span class="menu-text" data-template="Edit <b>${file}</b> in this editor">Edit <b>${file}</b> in this editor</span>
+                </button>
+            </li>
+            <li id="menu_file_close" class="menu-item">
+                <button class="menu-btn">
+                    <i class="fa fa-folder"></i>
+                    <span class="menu-text" data-template="Close <b>${file}</b> (abandon undo history)">Close <b>${file}</b> (abandon undo history)</span>
                 </button>
             </li>
             <li id="menu_file_open_new" class="menu-item">
@@ -51,14 +69,20 @@
                     <span class="menu-text">Exit Fullscreen</span>
                 </a>
             </li>
-            <li class="menu-separator"></li>
+            <li id="menu_editor_picker" class="menu-item">
+                <a href="#" class="menu-btn">
+                    <i class="fa fa-expand"></i>
+                    <span class="menu-text">Color Picker</span>
+                </a>
+            </li>
+            <li id="menu_sep1" class="menu-separator"></li>
             <li id="menu_file_new" class="menu-item">
                 <button class="menu-btn">
                     <i class="fa fa-plus"></i>
                     <span class="menu-text">New File</span>
                 </button>
             </li>
-            <li class="menu-separator"></li>
+            <li id="menu_sep2" class="menu-separator"></li>
             <li id="menu_file_debug" class="menu-item">
                 <button type="button" class="menu-btn">
                     <i class="fa fa-reply"></i>
@@ -71,7 +95,7 @@
                     <span class="menu-text" data-template="Serve <b>${file}">Serve <b>${file}</b></span>
                 </button>
             </li>
-            <li class="menu-separator"></li>
+            <li id="menu_sep3" class="menu-separator"></li>
             <li id="menu_file_copy" class="menu-item">
                 <button type="button" class="menu-btn">
                     <i class="fa fa-download"></i>
@@ -90,18 +114,50 @@
                     <span class="menu-text" data-template="Delete <b>${file}">Delete <b>${file}</b></span>
                 </button>
             </li>
+           
         </ul>
+        
+        <ul id="theme_menu" class="menu">
+            <li class="menu-item">
+                <button class="menu-btn">
+                    <i class="fa fa-tint"></i>
+                    <span class="menu-text"></span>
+                </button>
+            </li>
+        </ul>
+        
+        <ul id="mode_menu" class="menu">
+            <li class="menu-item">
+                <button class="menu-btn">
+                    <i class="fa fa-tint"></i>
+                    <span class="menu-text"></span>
+                </button>
+            </li>
+        </ul>
+        
         <div class="panes-container">
             <div class="left-pane file_tree" id="left-pane">
                 
             </div>
             <div class="panes-separator" id="panes-separator"></div>
-            <div class="right-pane" id="editor"></div>
+            <div class="right-pane" id="editor">
+                
+                <div id="editor_resizing" class="centered">
+                    Resizing&nbsp;Editor
+                </div>
+                
+            </div>
         </div>
+        
+        
+        
         <div class="click_for_fullscreen">
             <div class="centered">
                 Click for fullscreen
             </div>
         </div>
+        
+        <div id="picker"></div>
+        
     </body>
 </html>
