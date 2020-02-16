@@ -18,7 +18,7 @@
         "express-swizzle-route": "github:jonathan-annett/express-swizzle-route#83559ab73e66efb5889b4b01afeb1beba01dc753",
         "express-ws": "^4.0.0",
         "get-localhost-hostname": "github:jonathan-annett/get-localhost-hostname#810f032d65365f5ad82c2c9d2b6483b545ba6996",
-        "jsextensions": "github:jonathan-annett/jsextensions#7e8032a4553d795fc72d9fc4babafdbd4b762f95",
+        "jsextensions": "github:jonathan-annett/jsextensions#1e05f94d298cbe04aca5e3b23907fb790dfafcd2",
         "remove": "^0.1.5",
         "serve-favicon": "github:jonathan-annett/serve-favicon#612c1a1b6301dc4ab0512bd467a8239e81a2af04",
         "string-diff-regex": "github:jonathan-annett/string-diff-regex#5d2da54bf1bb15500a3b23024624cf028ccac4a0"
