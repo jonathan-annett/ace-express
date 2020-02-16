@@ -15,11 +15,17 @@ installation (only tested on chromebooks!)
     cd ace-express
     chmod 755 ./install.sh
     ./install.sh
+    
+simple command line use
+-----------------------
+
+
+
     # open a single file
     ace-express --files sample.js
-    # demo open a directory of files
+    # open a directory of files
     ace-express --dirs ace-public
-    # demo open a directory of files, and a few extra files
+    # open a directory of files, and a few extra files
     ace-express --files sample.js install.sh --dirs ace-public
     
 
