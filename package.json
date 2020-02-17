@@ -18,8 +18,8 @@
         "express-ws": "^4.0.0",
         "font-awesome-express": "github:jonathan-annett/font-awesome-express#e7b7dc8ee7a824fe17d0dbfc47b142c8f10d90b0",
         "get-localhost-hostname": "github:jonathan-annett/get-localhost-hostname#65e28eb78e1c87814a78618b683f378799113b2a",
-        "jsextensions": "github:jonathan-annett/jsextensions#656a7ccfb035a093f71d1703465e5212ac56e49f",
-        "perf_now_time": "github:jonathan-annett/perf_now_time#25cc0ce7e3e0ca5afad3ce39e7e0ac81c1c90983",
+        "jsextensions": "github:jonathan-annett/jsextensions#b82e92e36fad99c61ea90c426f0280701fba977a",
+        "perf_now_time": "github:jonathan-annett/perf_now_time#b6574a359d5f5ef9041ed1b16f4b9fa17fc451ab",
         "remove": "^0.1.5",
         "serve-favicon": "github:jonathan-annett/serve-favicon#612c1a1b6301dc4ab0512bd467a8239e81a2af04",
         "string-diff-regex": "github:jonathan-annett/string-diff-regex#92ded99dce1e76ea751f0e58a9689614c4ed0416"
