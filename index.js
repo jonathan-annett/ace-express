@@ -79,7 +79,9 @@ demos_index    = "<html><head></head><body>\n"+
                   }).join("<br>\n")+"\n</body></html>",
 
 //chromebooks do something funky with localhost under penguin/crostini, so help a coder out....
-hostname = require("get-localhost-hostname"),
+start_browser_express = require("get-localhost-hostname/start-browser.js")
+hostname     = start_browser_express.hostname,
+open_browser = start_browser_express.open_browser,
 acelib = {};
 
 
@@ -849,7 +851,7 @@ function editor_CLI_KeyLoop(url) {
     process.stdin.setRawMode(true);
     
     console.log('opening '+url);
-    child_process.spawn("xdg-open",[url]);
+    open_browser(url);
     process.stdin.on('keypress', function (str, key) {
             
         switch (true) {
@@ -863,7 +865,7 @@ function editor_CLI_KeyLoop(url) {
                 
             case !key.ctrl && key.name==='space' :
                 console.log('opening '+url);
-                return child_process.spawn("xdg-open",[url]);
+                return open_browser(url);
                 
             default : 
             
@@ -941,7 +943,7 @@ Object.defineProperties(acelib,{
         var listener = app.listen(port||3000, function() {
             var url =  'http://'+hostname+':' + listener.address().port+ace_lib_base_url+"/editor.html";
             console.log('goto '+url);
-            child_process.spawn("xdg-open",[url]);
+            open_browser(url);
         });
 
     },
