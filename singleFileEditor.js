@@ -55,7 +55,7 @@ return function singleFileEditor(theme,file,port,append_html) {
     });
 
     return fileEditor(theme,file,app,append_html);
-}
+};
 
 
 };

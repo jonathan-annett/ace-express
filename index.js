@@ -79,7 +79,7 @@ demos_index    = "<html><head></head><body>\n"+
                   }).join("<br>\n")+"\n</body></html>",
 
 //chromebooks do something funky with localhost under penguin/crostini, so help a coder out....
-start_browser_express = require("get-localhost-hostname/start-browser.js")
+start_browser_express = require("get-localhost-hostname/start-browser.js"),
 hostname     = start_browser_express.hostname,
 open_browser = start_browser_express.open_browser,
 acelib = {};
@@ -109,11 +109,11 @@ function editorListHtml(array,noun){
 }
 
 function editorThemesHtml(){
-    return editorListHtml(editor_themes,"theme")
+    return editorListHtml(editor_themes,"theme");
 }
 
 function editorModesHtml(){
-    return editorListHtml(editor_modes,"mode")
+    return editorListHtml(editor_modes,"mode");
 }
 
 

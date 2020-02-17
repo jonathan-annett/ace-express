@@ -13,6 +13,7 @@ module.exports = function (
 ) {
     
     var 
+    fs = require("fs"),
     hostname = require("get-localhost-hostname"),
     express = require("express"),
     favicon                 = require('serve-favicon'),
@@ -429,4 +430,4 @@ module.exports = function (
            };
     
     
-}
+};
