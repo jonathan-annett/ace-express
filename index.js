@@ -10,6 +10,9 @@ favicon                 = require('serve-favicon'),
 jsextensions            = require('jsextensions'),
 swizzleRoute            = require ('express-swizzle-route'),
 
+
+
+
 md2html                 = require('@bonniernews/md2html').render,
 ace_file                = require.resolve("ace-builds"),
 ace_editor_dir          = path.join(__dirname,"ace-public"),
@@ -393,7 +396,7 @@ function singleFileEditorBrowserCode(
         function configureWorker(e, session) {
             if (session.getMode().$id == "ace/mode/javascript") {
                 if (session.$worker) {
-                   session.$worker.send("changeOptions",[ {undef: true,maxerr:10000}])
+                   session.$worker.send("changeOptions",[ {undef: true,maxerr:10000}]);
                    // or
     //               session.$worker.send("setOptions",[ {onevar: false, asi:true}])
                 } else {
@@ -405,7 +408,7 @@ function singleFileEditorBrowserCode(
             }
         }
         // after changing the session
-        editor.session.on("changeMode", configureWorker)
+        editor.session.on("changeMode", configureWorker);
 
 
         editor.setTheme("ace/theme/"+(theme||"cobalt"));
@@ -714,7 +717,7 @@ function fileEditor(theme,file,app,append_html) {
         
         html.append(ace_lib_base_url+"/src-noconflict/ace.js","body");
         html.append(ace_lib_base_url+"/src-noconflict/ext-modelist.js","body");
-
+        html.append("/perf_now_time.js","head");
 
         html.append ("/js/polyfills.min.js","head");
         html.append ("/js/extensions.min.js","head");

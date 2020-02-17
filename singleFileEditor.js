@@ -23,7 +23,9 @@ return function singleFileEditor(theme,file,port,append_html) {
     var expressWs = require('express-ws')(app);
     var faExpress = require('font-awesome-express')(app);
     
-    
+    var perf_now_time           = require('perf_now_time');
+    perf_now_time.express(express,app);
+
 
     app.use(remote_ip());
     app.use(favicon());

@@ -2234,6 +2234,7 @@ function masterHTMLBrowserCode(
     
             html.append(faExpress.url_min,"head");
             html.append(ace_editor_css_url,"head");
+            
             html.append(title,"title");
             var filesNow = getFiles ();
             

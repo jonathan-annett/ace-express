@@ -138,7 +138,7 @@ body {
      }
      
      #editor_resizing {
-         
+         display:none;
          font-family: Monaco;
          font-size:20pt;
      }
@@ -366,6 +366,21 @@ body {
         top:1px;
     }
     
+    .startup-keys,
+    .startup-title {
+        top: 30%;
+        font-family:Arial;
+        font-size:40px;
+        font-weight:bold;
+     
+    }
+    
+    .startup-keys {
+     font-size:16px;
+   
+     top: 60%;
+        
+    }
 
 }
 

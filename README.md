@@ -8,8 +8,6 @@ still under development. check back later
 installation (only tested on chromebooks!)
 ------------
 
-
-
     cd ~
     git clone https://github.com/jonathan-annett/ace-express.git
     cd ace-express

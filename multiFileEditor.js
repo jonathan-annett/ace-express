@@ -64,6 +64,9 @@ module.exports = function (
                var app = express();
                var expressWs = require('express-ws')(app);
                var faExpress = require('font-awesome-express')(app);
+               var perf_now_timelib           = require('perf_now_time');
+               var perf_now_time = perf_now_timelib();
+               perf_now_time.express(express,app);
            
                app.use(remote_ip());
                app.use(favicon());
